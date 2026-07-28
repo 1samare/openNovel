@@ -109,11 +109,15 @@
 - Consumes: Task 2 `AgentRun` contracts and validation.
 - Produces: `RunRepository` and `JsonRunRepository` with `save`, `get`, `list`, `getEvents`.
 
-- [ ] Write tests for first save, replacement, reload, event filtering, corrupt JSON, unknown schema, invalid Run and failed write preservation.
-- [ ] Run focused test and confirm expected RED failure.
-- [ ] Implement schema version 1, atomic temp-write/rename and sanitized `RunLoadIssue` results.
-- [ ] Run focused tests, full tests, README contract and typecheck.
-- [ ] Commit as `feat: persist agent runs atomically`.
+- [x] Write tests for first save, replacement, reload, event filtering, corrupt JSON, unknown schema, invalid Run and failed write preservation.
+- [x] Run focused test and confirm expected RED failure.
+- [x] Implement schema version 1, atomic temp-write/rename and sanitized `RunLoadIssue` results.
+- [x] Run focused tests, full tests, README contract and typecheck.
+- [x] Commit as `feat: persist agent runs atomically`.
+
+**Actual results:** Added `RunRepository` and injected-root `JsonRunRepository`. Each saved file is exactly `{ "schemaVersion": 1, "run": ... }`; saves use a same-directory temporary file followed by rename. Invalid snapshots are never overwritten, and list diagnostics use fixed messages plus encoded filename identifiers so they cannot expose absolute paths. The seven real temporary-file tests also cover an encoded absolute-looking corrupt filename.
+
+**Verification results:** RED: `node --experimental-strip-types --test tests/agent-repository.test.mjs` failed with `ERR_MODULE_NOT_FOUND` for the missing repository module. GREEN: the focused command passed 7/7, including the later encoded-path diagnostic regression. `npm.cmd run check:readmes` passed, `npm.cmd test` passed 30/30, and `npm.cmd run typecheck` passed. A supplementary direct TypeScript check reaches the pre-existing Task 2 error `src/agent/validation.ts(24,5): TS18046`; it is outside this task's configured typecheck inputs and was not changed.
 
 ### Task 4: Mock Executor 与 Agent Orchestrator
 

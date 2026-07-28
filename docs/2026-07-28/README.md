@@ -27,3 +27,4 @@
 - 2026-07-28：回填 Task 1 Fix Round 1 的 RED/GREEN 与全量质量检查结果。
 - 2026-07-28：回填 Task 2 的 Agent 公共契约、校验、状态机和全量质量检查结果。
 - 2026-07-28：记录 Task 2 Fix Round 1 的安全错误规范化回归修复。
+- 2026-07-28：回填 Task 3 的 JSON Run Repository、原子快照和安全恢复诊断实现记录。
