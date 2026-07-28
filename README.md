@@ -26,6 +26,8 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 
 - 2026-07-28：建立全仓 README 目录契约和 Windows 质量门禁。
 
+- 2026-07-28：将 `src/agent/` 纳入 Node TypeScript 严格检查，避免 Agent 运行时代码脱离项目类型门禁。
+
 ## 技术栈
 
 - Electron
@@ -66,6 +68,8 @@ npm run build
 ```powershell
 npm start
 ```
+
+`tsconfig.node.json` 的 Node 类型检查覆盖 Electron 主进程、预加载层、`src/agent/` 和共享契约；可使用 `npm run typecheck:node` 单独验证这些模块。
 
 ## 目录结构
 

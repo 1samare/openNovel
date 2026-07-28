@@ -119,6 +119,10 @@
 
 **Verification results:** RED: `node --experimental-strip-types --test tests/agent-repository.test.mjs` failed with `ERR_MODULE_NOT_FOUND` for the missing repository module. GREEN: the focused command passed 7/7, including the later encoded-path diagnostic regression. `npm.cmd run check:readmes` passed, `npm.cmd test` passed 30/30, and `npm.cmd run typecheck` passed. A supplementary direct TypeScript check reaches the pre-existing Task 2 error `src/agent/validation.ts(24,5): TS18046`; it is outside this task's configured typecheck inputs and was not changed.
 
+**Concern resolution before review plan:** Extend the Node project typecheck to include every `src/agent` module, reproduce the resulting strict diagnostics through `npm.cmd run typecheck:node`, and make the smallest Task 2/3 type-safe fixes. Re-run the focused repository test, README contract, full test suite and full typecheck, then record the RED/GREEN evidence in the Task 3 report before a separate local commit.
+
+**Concern resolution before review results:** `tsconfig.node.json` now includes `src/agent/**/*.ts`, making the configured Node typecheck use the existing Node type context for repository imports. RED exposed `validation.ts(24,5): TS18046`; the event guard now verifies `typeof value.sequence === 'number'` before integer comparison. GREEN: `npm.cmd run typecheck:node`, the focused repository suite (7/7), README contract, full suite (30/30) and full typecheck all passed. The separate local commit is recorded in the Task 3 report.
+
 ### Task 4: Mock Executor 与 Agent Orchestrator
 
 **Files:**

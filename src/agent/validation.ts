@@ -20,6 +20,7 @@ export const isRunStatus = (value: unknown): value is RunStatus =>
 export const isAgentEvent = (value: unknown): value is AgentEvent => {
   if (
     !isRecord(value) ||
+    typeof value.sequence !== 'number' ||
     !Number.isInteger(value.sequence) ||
     value.sequence < 1 ||
     typeof value.at !== 'string' ||

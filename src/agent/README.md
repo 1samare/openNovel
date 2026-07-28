@@ -18,9 +18,11 @@
 ## 维护规则
 
 修改状态、事件或校验规则时，必须先扩展 `tests/agent-state-machine.test.mjs` 的行为断言，并同步更新本 README 与共享契约说明。
+本目录所有 TypeScript 模块都由 `tsconfig.node.json` 的 Node 严格类型检查覆盖。
 
 ## 变更同步
 
 - 2026-07-28：新增 Agent 公共契约的运行时校验和状态机实现。
 - 2026-07-28：错误转换始终返回新的公共错误对象，避免保留堆栈或扩展字段。
 - 2026-07-28：新增 JSON Run Repository，原子保存 schemaVersion 1 快照并对损坏快照返回安全诊断。
+- 2026-07-28：将 Agent 模块纳入 Node 类型检查，并收窄事件序号的运行时类型守卫。
