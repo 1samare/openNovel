@@ -2,6 +2,30 @@
 
 OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应用。本仓库当前交付 Electron + Vue 3 + TypeScript 基础架构，不包含业务功能。
 
+## 目录用途
+
+仓库根目录存放应用入口配置、项目协作约束、全局文档与质量命令。
+
+## 内容说明
+
+- `src/`：Electron 与 Vue 应用源码。
+- `tests/`：架构、文档和质量契约测试。
+- `scripts/`：本地质量检查脚本。
+- `docs/`：按日期归档的设计、计划和验证记录。
+- `.github/`：GitHub Actions 自动化配置。
+
+## 依赖边界
+
+根目录配置定义构建与质量入口；应用运行时代码位于 `src/`，测试与自动化不得承载业务功能或本地密钥。
+
+## 维护规则
+
+修改根目录文件时，必须同步更新本 README，并遵守 `AGENTS.md` 中的计划、范围控制和 README 目录契约。
+
+## 变更同步
+
+- 2026-07-28：建立全仓 README 目录契约和 Windows 质量门禁。
+
 ## 技术栈
 
 - Electron
@@ -31,6 +55,7 @@ npm run dev
 ## 质量检查
 
 ```powershell
+npm run check:readmes
 npm run typecheck
 npm test
 npm run build
@@ -79,3 +104,7 @@ docs/            按日期归档的设计和修改计划
 ## 修改计划约定
 
 任何代码、配置或文档修改前，先在 `docs/YYYY-MM-DD/` 下创建对应的 `文件名称计划.md`。完整约束见 `AGENTS.md`。
+
+## README 目录契约
+
+每个受版本控制且由项目维护的目录都包含 `README.md`。修改目录中的任意文件时，必须在同一变更中更新该目录的 README；提交前运行 `npm run check:readmes` 验证此约定。检查会排除 Git 元数据、工作树、依赖、构建产物、缓存和临时目录。
