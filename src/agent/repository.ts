@@ -2,7 +2,7 @@ import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promise
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 
-import type { AgentEvent, AgentResult, AgentRun } from '../shared/agent.ts'
+import type { AgentEvent, AgentResult, AgentRun, RunListResult, RunLoadIssue } from '../shared/agent.ts'
 import { isAgentRun } from './validation.ts'
 
 const schemaVersion = 1
@@ -14,21 +14,12 @@ type RunSnapshot = {
 
 type ReplaceSnapshot = (temporaryPath: string, snapshotPath: string) => Promise<void>
 
-export type RunLoadIssue = {
-  id: string
-  code: 'CORRUPT_JSON' | 'UNSUPPORTED_SCHEMA' | 'INVALID_RUN' | 'READ_FAILED'
-  message: string
-}
-
-export type RunList = {
-  runs: AgentRun[]
-  issues: RunLoadIssue[]
-}
+export type { RunListResult, RunLoadIssue } from '../shared/agent.ts'
 
 export interface RunRepository {
   save(run: AgentRun): Promise<AgentResult<void>>
   get(id: string): Promise<AgentResult<AgentRun | undefined>>
-  list(): Promise<RunList>
+  list(): Promise<RunListResult>
   getEvents(id: string, afterSequence?: number): Promise<AgentResult<AgentEvent[]>>
 }
 
@@ -154,7 +145,7 @@ export class JsonRunRepository implements RunRepository {
     }
   }
 
-  async list(): Promise<RunList> {
+  async list(): Promise<RunListResult> {
     try {
       await mkdir(this.storageRoot, { recursive: true })
     } catch {

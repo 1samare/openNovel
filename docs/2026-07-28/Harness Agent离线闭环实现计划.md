@@ -207,6 +207,27 @@
 - [x] Run focused tests, full tests, README contract and typecheck.
 - [x] Commit as `feat: orchestrate offline agent runs`.
 
+### Task 4 Fix Round 1：Orchestrator 恢复与观察隔离
+
+**修改目标：** 关闭 Task 4 审查发现的审批绕过、订阅者污染、仓储错误吞没和离线执行器/并发路径缺口，确保审批、恢复和公开结果契约在持久化失败与重启后仍保持一致。
+
+**修改范围与明确不包含的内容：** 只调整 Agent 的审批原子边界、事件通知隔离、Run 列表公共结果、仓储错误传播及对应离线行为测试；不实现 Electron IPC、Preload、UI、真实模型、网络或 Task 5+ 能力。
+
+**涉及的文件：**
+- Modify: `src/shared/agent.ts`, `src/shared/README.md`
+- Modify: `src/agent/repository.ts`, `src/agent/orchestrator.ts`, `src/agent/README.md`
+- Modify: `tests/agent-orchestrator.test.mjs`, `tests/README.md`
+- Modify: this implementation plan and `docs/2026-07-28/README.md`
+- Modify: `.superpowers/sdd/Harness Agent离线闭环实现计划/task-4-report.md`
+
+**实施步骤：**
+1. 先补审批持久化失败/重启、监听器隔离、仓储错误与列表诊断保留、Mock Executor 和并发取消路径的聚焦失败用例。
+2. 将 analysis `step.completed` 的检查点保留在 analysis，直到 `awaiting_approval` 与 `approval.requested` 同一持久化快照成功提交；恢复从 analysis 末尾重新请求审批而不进入 final。
+3. 为每个订阅者提供独立事件快照，隔离其异常和变异；补充公开 `RunListResult`，让读取/命令/恢复传播仓储错误并保留 issues。
+4. 以最小改动补齐 Mock Executor、排队快照、重复命令和取消竞态的行为保护，同步所有受影响目录 README 与任务报告。
+
+**验证方式与通过标准：** 聚焦测试先以现有实现的行为差异失败；实现后聚焦用例覆盖所有审查项并通过。随后 `npm.cmd test`、`npm.cmd run check:readmes`、`npm.cmd run typecheck` 和 `git diff --check` 均成功，且提交仅包含本轮 Task 4 文件。
+
 ### Task 5: Electron 安全 IPC、Preload API 与结构化日志
 
 **Files:**
@@ -335,3 +356,10 @@
 - 实际实现：新增 `AgentExecutor` 流式边界和确定性 `MockExecutor`，其文本块与延迟均可注入，并在每次生成前后检查 `AbortSignal`。`AgentOrchestrator` 注入仓储、执行器、时钟与 ID；创建先原子持久化 queued/created 快照并异步驱动。每个事件变更按“追加事件 → 持久化快照 → 更新内存 → 通知订阅者”完成；每个 Run 使用独立串行队列，取消先中止活跃控制器再排队提交取消。审批驱动 final 阶段，执行错误映射为 `EXECUTION_FAILED`，未知 ID 映射为 `RUN_NOT_FOUND`，恢复将持久化 running Run 变为 interrupted，显式恢复从 `{ phase, nextChunkIndex }` 继续而不重复文本块。
 - GREEN：聚焦用例通过 6/6，覆盖严格事件序列、分析/最终流、审批暂停与完成、取消、执行器失败、并发审批/取消、持久化先于通知、事件回补，以及重启恢复去重。
 - 验证：`npm.cmd test` 通过 44/44；`npm.cmd run check:readmes` 通过；`npm.cmd run typecheck` 的 Node 与 Web 检查均通过；`git diff --check` 未报告空白错误（仅有 Git 的 LF/CRLF 转换提示）。
+
+### Task 4 Fix Round 1：Orchestrator 恢复与观察隔离
+
+- RED：新增聚焦用例后，`node --experimental-strip-types --test tests/agent-orchestrator.test.mjs` 以退出码 1 结束。审批持久化失败时已保存快照错误地为 `{ phase: 'final', nextChunkIndex: 0 }`；抛出订阅者异常直接拒绝 `createRun`；损坏快照的 `VALIDATION_ERROR` 被错误转换为 `RUN_NOT_FOUND`。这些失败分别直接对应 Critical 和三项 Important 审查发现。
+- 实际实现：analysis `step.completed` 现在保留 analysis 检查点，只有 `awaiting_approval`、`approval.requested` 和 final 检查点在同一快照成功持久化后才公开；恢复从 analysis 末尾重新请求审批，final 只能在 approval.resolved 后执行。每位订阅者收到独立 `structuredClone` 快照，监听器异常被隔离；`RunLoadIssue` 与 `RunListResult` 提升为共享公共契约，`listRuns`/`recoverInterruptedRuns` 返回 `{ runs, issues }`，读取和命令方法原样传播仓储 AgentResult 错误。补齐 Mock Executor、排队快照、重复审批/取消和延迟 chunk 取消的行为用例。
+- GREEN：聚焦编排器套件通过 12/12；覆盖审批失败后重启、监听器变异/异常/退订、损坏与读取失败传播、issues 保留、非 running 恢复、确定性 Mock 流、队列先持久化及取消竞态。
+- 验证：`npm.cmd test` 通过 50/50；`npm.cmd run check:readmes` 通过；`npm.cmd run typecheck` 的 Node 与 Web 检查均通过；`git diff --check` 未报告空白错误（仅有 Git 的 LF/CRLF 转换提示）。

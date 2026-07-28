@@ -7,6 +7,7 @@ import type {
   AgentEventType,
   AgentResult,
   AgentRun,
+  RunListResult,
   RunStatus
 } from '../shared/agent.ts'
 import { toAgentError } from './errors.ts'
@@ -97,31 +98,41 @@ export class AgentOrchestrator {
   }
 
   async getRun(id: string): Promise<AgentResult<AgentRun>> {
-    const run = await this.loadRun(id)
-    return run === undefined ? notFound() : { ok: true, data: run }
+    const loaded = await this.loadRun(id)
+    if (!loaded.ok) {
+      return loaded
+    }
+    return loaded.data === undefined ? notFound() : { ok: true, data: loaded.data }
   }
 
-  async listRuns(): Promise<AgentResult<AgentRun[]>> {
+  async listRuns(): Promise<AgentResult<RunListResult>> {
     const listed = await this.repository.list()
     for (const run of listed.runs) {
       this.runs.set(run.id, run)
     }
-    return { ok: true, data: listed.runs }
+    return { ok: true, data: listed }
   }
 
   async getEvents(id: string, afterSequence = 0): Promise<AgentResult<AgentEvent[]>> {
-    const run = await this.loadRun(id)
-    if (run === undefined) {
+    const loaded = await this.loadRun(id)
+    if (!loaded.ok) {
+      return loaded
+    }
+    if (loaded.data === undefined) {
       return notFound()
     }
     return this.repository.getEvents(id, afterSequence)
   }
 
   async approveRun(id: string): Promise<AgentResult<AgentRun>> {
-    const run = await this.loadRun(id)
-    if (run === undefined) {
+    const loaded = await this.loadRun(id)
+    if (!loaded.ok) {
+      return loaded
+    }
+    if (loaded.data === undefined) {
       return notFound()
     }
+    const run = loaded.data
     if (run.status !== 'awaiting_approval') {
       return statusError(run.status, 'running')
     }
@@ -134,8 +145,11 @@ export class AgentOrchestrator {
   }
 
   async cancelRun(id: string): Promise<AgentResult<AgentRun>> {
-    const run = await this.loadRun(id)
-    if (run === undefined) {
+    const loaded = await this.loadRun(id)
+    if (!loaded.ok) {
+      return loaded
+    }
+    if (loaded.data === undefined) {
       return notFound()
     }
 
@@ -144,17 +158,21 @@ export class AgentOrchestrator {
   }
 
   async resumeRun(id: string): Promise<AgentResult<AgentRun>> {
-    const run = await this.loadRun(id)
-    if (run === undefined) {
+    const loaded = await this.loadRun(id)
+    if (!loaded.ok) {
+      return loaded
+    }
+    if (loaded.data === undefined) {
       return notFound()
     }
+    const run = loaded.data
     if (run.status !== 'interrupted') {
       return statusError(run.status, 'running')
     }
     return this.beginPhase(id, run.checkpoint.phase, 'run.resumed')
   }
 
-  async recoverInterruptedRuns(): Promise<AgentResult<AgentRun[]>> {
+  async recoverInterruptedRuns(): Promise<AgentResult<RunListResult>> {
     const listed = await this.repository.list()
     for (const run of listed.runs) {
       this.runs.set(run.id, run)
@@ -172,7 +190,7 @@ export class AgentOrchestrator {
       }
       recovered.push(interrupted.data)
     }
-    return { ok: true, data: recovered }
+    return { ok: true, data: { runs: recovered, issues: listed.issues } }
   }
 
   subscribe(listener: AgentEventListener): () => void {
@@ -203,10 +221,11 @@ export class AgentOrchestrator {
         return
       }
 
-      const run = await this.loadRun(id)
-      if (run === undefined || run.status !== 'running') {
+      const loaded = await this.loadRun(id)
+      if (!loaded.ok || loaded.data === undefined || loaded.data.status !== 'running') {
         return
       }
+      const run = loaded.data
 
       for await (const text of this.executor.stream({
         prompt: run.prompt,
@@ -232,7 +251,7 @@ export class AgentOrchestrator {
       }
 
       if (phase === 'analysis') {
-        await this.transitionEvent(id, 'awaiting_approval', 'approval.requested', {})
+        await this.requestApproval(id)
       } else {
         await this.transitionEvent(id, 'completed', 'run.completed', {})
       }
@@ -289,9 +308,7 @@ export class AgentOrchestrator {
           ...run,
           updatedAt: timestamp,
           events: [...run.events, eventFor(run, 'step.completed', timestamp, { phase })],
-          checkpoint: phase === 'analysis'
-            ? { phase: 'final', nextChunkIndex: 0 }
-            : run.checkpoint
+          checkpoint: run.checkpoint
         }
       }
     })
@@ -314,6 +331,24 @@ export class AgentOrchestrator {
         data: {
           ...transitioned.data,
           events: [...run.events, eventFor(run, type, timestamp, payload)]
+        }
+      }
+    })
+  }
+
+  private async requestApproval(id: string): Promise<AgentResult<AgentRun>> {
+    return this.mutate(id, (run) => {
+      const timestamp = this.clock()
+      const transitioned = transitionRun(run, 'awaiting_approval', timestamp)
+      if (!transitioned.ok) {
+        return transitioned
+      }
+      return {
+        ok: true,
+        data: {
+          ...transitioned.data,
+          events: [...run.events, eventFor(run, 'approval.requested', timestamp, {})],
+          checkpoint: { phase: 'final', nextChunkIndex: 0 }
         }
       }
     })
@@ -382,23 +417,30 @@ export class AgentOrchestrator {
     const event = run.events.at(-1)
     if (event !== undefined) {
       for (const listener of this.listeners) {
-        listener(event)
+        try {
+          listener(structuredClone(event))
+        } catch {
+          // Subscriber failures and mutations must not affect the committed Run.
+        }
       }
     }
     return { ok: true, data: run }
   }
 
-  private async loadRun(id: string): Promise<AgentRun | undefined> {
+  private async loadRun(id: string): Promise<AgentResult<AgentRun | undefined>> {
     const inMemory = this.runs.get(id)
     if (inMemory !== undefined) {
-      return inMemory
+      return { ok: true, data: inMemory }
     }
     const loaded = await this.repository.get(id)
-    if (!loaded.ok || loaded.data === undefined) {
-      return undefined
+    if (!loaded.ok) {
+      return loaded
+    }
+    if (loaded.data === undefined) {
+      return loaded
     }
     this.runs.set(id, loaded.data)
-    return loaded.data
+    return loaded
   }
 
   private async enqueue<T>(id: string, operation: () => Promise<T>): Promise<T> {

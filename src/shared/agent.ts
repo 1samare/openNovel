@@ -73,6 +73,17 @@ export type AgentRun = {
   error?: AgentError
 }
 
+export type RunLoadIssue = {
+  id: string
+  code: 'CORRUPT_JSON' | 'UNSUPPORTED_SCHEMA' | 'INVALID_RUN' | 'READ_FAILED'
+  message: string
+}
+
+export type RunListResult = {
+  runs: AgentRun[]
+  issues: RunLoadIssue[]
+}
+
 export type AgentResult<T> =
   | {
       ok: true
