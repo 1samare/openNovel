@@ -14,10 +14,13 @@ test('Electron 窗口采用隔离且无 Node 注入的安全默认值', async ()
   assert.match(source, /setWindowOpenHandler/)
 })
 
-test('预加载层不暴露 Electron 或 Node API', async () => {
+test('预加载层仅暴露命名 Agent 桥接且不暴露通用 Electron 或 Node API', async () => {
   const source = await readProjectFile('src/preload/index.ts')
 
-  assert.doesNotMatch(source, /contextBridge|ipcRenderer|require\s*\(/)
+  assert.match(source, /contextBridge\.exposeInMainWorld\(\s*'openNovel'/)
+  assert.match(source, /agent:\s*createAgentApi\(ipcRenderer\)/)
+  assert.doesNotMatch(source, /exposeInMainWorld\(\s*['"](?:electron|ipcRenderer|node)['"]/)
+  assert.doesNotMatch(source, /require\s*\(/)
   assert.match(source, /process\.contextIsolated/)
 })
 

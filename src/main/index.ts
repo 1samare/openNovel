@@ -1,8 +1,24 @@
 import { join } from 'node:path'
-import { app, BrowserWindow } from 'electron'
+import { pathToFileURL } from 'node:url'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { APP_NAME } from '@shared/app'
+import { registerAgentIpcHandlers } from './agent-ipc.ts'
+import { createAgentRuntime, type AgentRuntime } from './agent-runtime.ts'
+import type { AgentSenderPolicy } from './agent-ipc-security.ts'
 
-const createMainWindow = (): BrowserWindow => {
+const senderPolicy = (): AgentSenderPolicy => {
+  const devServerUrl = process.env.ELECTRON_RENDERER_URL
+  if (devServerUrl !== undefined) {
+    try {
+      return { devServerOrigin: new URL(devServerUrl).origin }
+    } catch {
+      return {}
+    }
+  }
+  return { appPageUrl: pathToFileURL(join(__dirname, '../renderer/index.html')).href }
+}
+
+const createMainWindow = (runtime: AgentRuntime): BrowserWindow => {
   const mainWindow = new BrowserWindow({
     width: 1360,
     height: 860,
@@ -22,6 +38,7 @@ const createMainWindow = (): BrowserWindow => {
 
   mainWindow.once('ready-to-show', () => mainWindow.show())
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  runtime.attachWebContents(mainWindow.webContents)
   mainWindow.webContents.on(
     'did-fail-load',
     (_event, errorCode, errorDescription, validatedURL) => {
@@ -39,11 +56,17 @@ const createMainWindow = (): BrowserWindow => {
 }
 
 app.whenReady().then(() => {
-  createMainWindow()
+  const runtime = createAgentRuntime({
+    storageRoot: join(app.getPath('userData'), 'agent-runs'),
+    senderPolicy: senderPolicy()
+  })
+  registerAgentIpcHandlers(ipcMain, runtime)
+  void runtime.recover()
+  createMainWindow(runtime)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow()
+      createMainWindow(runtime)
     }
   })
 })

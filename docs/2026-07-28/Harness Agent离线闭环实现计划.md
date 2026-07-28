@@ -241,13 +241,13 @@
 - Consumes: Task 4 Orchestrator.
 - Produces: `window.openNovel.agent` API exactly as defined in the design, including `getEvents` and `subscribeEvents`.
 
-- [ ] Write tests for command validation, sender allowlist, error serialization, channel allowlist and event-object isolation.
-- [ ] Replace the obsolete “preload exposes no API” assertion with a behavior contract that permits only the named Agent bridge and still rejects generic Node/Electron exposure.
-- [ ] Run focused test and confirm expected RED failure.
-- [ ] Register fixed IPC handlers, production repository path, recovery call, event forwarding and redacted metadata logger.
-- [ ] Expose only the typed contextBridge API and update renderer global types.
-- [ ] Run focused tests, full tests, README contract, typecheck and build.
-- [ ] Commit as `feat: expose secure agent ipc bridge`.
+- [x] Write tests for command validation, sender allowlist, error serialization, channel allowlist and event-object isolation.
+- [x] Replace the obsolete “preload exposes no API” assertion with a behavior contract that permits only the named Agent bridge and still rejects generic Node/Electron exposure.
+- [x] Run focused test and confirm expected RED failure.
+- [x] Register fixed IPC handlers, production repository path, recovery call, event forwarding and redacted metadata logger.
+- [x] Expose only the typed contextBridge API and update renderer global types.
+- [x] Run focused tests, full tests, README contract, typecheck and build.
+- [x] Commit as `feat: expose secure agent ipc bridge`.
 
 ### Task 6: Harness UI 闭环
 
@@ -373,3 +373,9 @@
 - 复审 Minor 计划：直接消费 MockExecutor 的 active final stream，断言 `finalChunks` 与 `nextChunkIndex` 的选择结果；保持现有进行中 abort 覆盖，不改动生产实现。
 - 复审 Minor 结果：在同一受控延迟 executor 用例中，analysis 从索引 1 输出 `analysis-2`，活动 final 从索引 1 输出 `final-2`，而另一个 final 流在 delay 期间中止且不输出。该测试仅扩展覆盖，现有实现无需修改。
 - 复审 Minor 验证：聚焦编排器套件通过 16/16；`npm.cmd test` 通过 54/54；`npm.cmd run check:readmes` 与 `npm.cmd run typecheck` 通过；`git diff --check` 无空白错误（仅 Git LF/CRLF 提示）。
+
+### Task 5：Electron 安全 IPC、Preload API 与结构化日志
+
+- RED：在创建 Task 5 生产模块前，`node --experimental-strip-types --test tests/agent-ipc.test.mjs tests/electron-foundation.test.mjs` 以退出码 1 结束。新 IPC 测试因缺少 `src/shared/agent-ipc.ts` 报 `ERR_MODULE_NOT_FOUND`，preload 架构契约因未暴露 `openNovel.agent` 失败。
+- 实际实现：新增固定七个命令和一个事件通道、逐命令参数守卫、顶层当前 `file:` 页面/精确开发服务器 origin 的 sender 白名单。IPC 处理器拒绝未授权 sender，将异常和不安全错误规范化为固定 `AgentResult`，不返回路径或堆栈。主进程以 `app.getPath('userData')/agent-runs` 组合 JSON Repository、Mock Executor 和 Orchestrator，执行启动恢复并只向授权存活页面发送克隆事件。预加载仅暴露 `window.openNovel.agent` 的八个命名方法，事件回调仅接收校验且克隆的 `AgentEvent`；日志严格只保留安全操作元数据。
+- GREEN：聚焦 IPC 和 Electron 基础套件通过 10/10；全量 `npm.cmd test` 通过 60/60；`npm.cmd run check:readmes`、Node/Web `npm.cmd run typecheck`、`npm.cmd run build` 和 `git diff --check` 全部以退出码 0 完成。未启动 GUI，未推送远端。

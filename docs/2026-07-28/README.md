@@ -45,3 +45,4 @@
 - 2026-07-28：回填 Task 4 Fix Round 1 复审追加的 legacy 审批证明修复与 54 项全量验证结果。
 - 2026-07-28：登记 Task 4 Fix Round 1 剩余 Minor 的 Mock final stream 覆盖计划。
 - 2026-07-28：回填 Task 4 Fix Round 1 剩余 Minor 的活动 final Mock stream 覆盖结果。
+- 2026-07-28：回填 Task 5 的安全 Agent IPC、Preload 最小桥接、运行时恢复和脱敏日志实现记录。

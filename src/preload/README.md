@@ -6,7 +6,8 @@
 
 ## 内容说明
 
-- `index.ts`：当前预加载入口，维持最小安全边界。
+- `index.ts`：仅在上下文隔离开启时暴露 `window.openNovel.agent`。
+- `agent-api.ts`：将八个命名 Agent 方法映射到固定 IPC 通道；只向回调交付校验且克隆后的 Agent 事件。
 
 ## 依赖边界
 
@@ -19,3 +20,4 @@
 ## 变更同步
 
 - 2026-07-28：建立预加载目录 README 契约。
+- 2026-07-28：新增无通用 Electron/Node/IPC 暴露的最小 Agent 桥接。
