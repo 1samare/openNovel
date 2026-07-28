@@ -53,6 +53,22 @@ test('allows a running run to fail with a safe error representation', () => {
   assert.equal('stack' in converted, false)
 })
 
+test('normalizes a valid-coded Error without retaining stack or extra fields', () => {
+  const unsafeError = Object.assign(new Error('invalid transition'), {
+    code: 'INVALID_STATE',
+    extra: 'do not expose'
+  })
+  const normalized = toAgentError(unsafeError)
+
+  assert.notEqual(normalized, unsafeError)
+  assert.deepEqual(normalized, {
+    code: 'INVALID_STATE',
+    message: 'invalid transition'
+  })
+  assert.equal('stack' in normalized, false)
+  assert.equal('extra' in normalized, false)
+})
+
 test('rejects duplicate approval after a run has resumed', () => {
   const approved = transition(createRun('awaiting_approval'), 'running')
   const duplicateApproval = transitionRun(approved, 'running', '2026-07-28T09:02:00.000Z')

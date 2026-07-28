@@ -79,6 +79,26 @@
 - [x] Run focused tests, full tests and typecheck.
 - [x] Commit as `feat: define agent run contracts`.
 
+### Task 2 Fix Round 1：安全错误规范化
+
+**修改目标：** 修复合法 Agent 错误码的 `Error` 被原样返回而可能保留堆栈和扩展字段的问题。
+
+**修改范围与明确不包含的内容：** 仅修改 Agent 错误转换、其回归测试和对应 README/验证记录；不修改状态机、运行时编排、IPC 或持久化。
+
+**涉及的文件：**
+- Modify: `src/agent/errors.ts`, `tests/agent-state-machine.test.mjs`, `src/agent/README.md`, `tests/README.md`
+- Modify: this implementation plan, `docs/README.md`, `docs/2026-07-28/README.md`
+
+**实施步骤：**
+- [x] 为带合法 Agent code、stack 和扩展字段的 `Error` 写入失败回归测试。
+- [x] 确认聚焦测试因原对象引用未被规范化而失败。
+- [x] 将已验证错误转换为只含 `code` 与 `message` 的新对象。
+- [x] 同步更新受影响目录 README 和验证记录。
+- [x] 运行聚焦测试、README 契约、全量测试和类型检查。
+- [x] 以独立本地提交保存修复。
+
+**验证方式与通过标准：** 规范化结果与原始 Error 不是同一实例，且不含 `stack`、扩展字段；聚焦测试、README 检查、全量测试和类型检查均以退出码 0 通过。
+
 ### Task 3: JSON Run Repository 与恢复检查点
 
 **Files:**
@@ -207,3 +227,9 @@
 - RED：`node --experimental-strip-types --test tests/agent-state-machine.test.mjs` 在模块尚未创建时按预期以 `ERR_MODULE_NOT_FOUND` 失败，缺失模块为 `src/agent/errors.ts`。
 - GREEN：同一聚焦命令在实现后通过 6/6；覆盖生命周期、取消、失败、安全错误转换、重复审批、终态保护和 Prompt 校验。
 - `npm.cmd run check:readmes`：通过；`npm.cmd test`：22/22 通过；`npm.cmd run typecheck`：Node 与 Web 类型检查通过。
+
+### Task 2 Fix Round 1：安全错误规范化
+
+- RED：`node --experimental-strip-types --test tests/agent-state-machine.test.mjs` 以 7 个用例中的 1 个失败结束；带合法 `INVALID_STATE` code 的 Error 与转换结果引用相同，错误为 `Expected "actual" not to be reference-equal to "expected"`。
+- GREEN：转换函数改为新建 `{ code, message }` 后，同一聚焦命令通过 7/7，回归断言确认不含 `stack` 和 `extra` 字段。
+- `npm.cmd run check:readmes`：通过；`npm.cmd test`：23/23 通过；`npm.cmd run typecheck`：Node 与 Web 类型检查通过。

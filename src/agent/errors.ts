@@ -22,7 +22,7 @@ export const toAgentError = (
   fallbackCode: AgentErrorCode = 'UNEXPECTED_ERROR'
 ): AgentError => {
   if (isAgentError(error)) {
-    return error
+    return { code: error.code, message: error.message }
   }
 
   if (error instanceof Error && error.message) {
