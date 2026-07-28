@@ -72,12 +72,12 @@
 **Interfaces:**
 - Produces: `RunStatus`, `AgentError`, `AgentEvent`, `AgentRun`, `AgentResult<T>`, validation guards and legal transition checks.
 
-- [ ] Write tests for valid lifecycle, cancellation, failure, duplicate approval, terminal mutation and prompt validation.
-- [ ] Run focused test and confirm expected RED failure because modules do not exist.
-- [ ] Implement shared discriminated types, safe error conversion, runtime guards and legal transition map.
-- [ ] Enable Node 22 `--experimental-strip-types` and TypeScript `.ts` extension imports.
-- [ ] Run focused tests, full tests and typecheck.
-- [ ] Commit as `feat: define agent run contracts`.
+- [x] Write tests for valid lifecycle, cancellation, failure, duplicate approval, terminal mutation and prompt validation.
+- [x] Run focused test and confirm expected RED failure because modules do not exist.
+- [x] Implement shared discriminated types, safe error conversion, runtime guards and legal transition map.
+- [x] Enable Node 22 `--experimental-strip-types` and TypeScript `.ts` extension imports.
+- [x] Run focused tests, full tests and typecheck.
+- [x] Commit as `feat: define agent run contracts`.
 
 ### Task 3: JSON Run Repository 与恢复检查点
 
@@ -187,6 +187,7 @@
 - `npm.cmd run check:readmes`：通过。
 - `npm.cmd test`：12/12 通过。
 - `npm.cmd run typecheck`：Node 与 Web 类型检查通过。
+
 - PowerShell 执行策略禁止 `npm.ps1`，因此验证使用等效的 `npm.cmd`；项目脚本与 CI 命令未作替换。
 
 ### Task 1 Fix Round 1：README 检查器审查修复
@@ -197,3 +198,12 @@
 - `npm.cmd run check:readmes`：通过。
 - `npm.cmd test`：16/16 通过。
 - `npm.cmd run typecheck`：Node 与 Web 类型检查通过。
+
+### Task 2：Agent 公共契约、校验与状态机
+
+- 新增纯共享契约 `RunStatus`、`AgentError`、`AgentEvent`、`AgentRun` 与 `AgentResult<T>`，Agent 核心保持与 Electron、Vue 无关。
+- 新增 Prompt、状态、事件和 Run 快照的运行时守卫；非空 Prompt 才被接受，Run 事件序号必须从 1 连续递增。
+- 新增不可变状态机，覆盖审批生命周期、任意非终态取消、执行失败、恢复后的重复审批拒绝和终态保护；非法转换统一返回 `INVALID_STATE`。
+- RED：`node --experimental-strip-types --test tests/agent-state-machine.test.mjs` 在模块尚未创建时按预期以 `ERR_MODULE_NOT_FOUND` 失败，缺失模块为 `src/agent/errors.ts`。
+- GREEN：同一聚焦命令在实现后通过 6/6；覆盖生命周期、取消、失败、安全错误转换、重复审批、终态保护和 Prompt 校验。
+- `npm.cmd run check:readmes`：通过；`npm.cmd test`：22/22 通过；`npm.cmd run typecheck`：Node 与 Web 类型检查通过。

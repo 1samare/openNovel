@@ -2,6 +2,7 @@
   "name": "open-novel",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "本地优先的小说 AI 辅助写作桌面应用",
   "config": {
     "electron_mirror": "https://npmmirror.com/mirrors/electron/"
@@ -16,7 +17,7 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json",
     "check:readmes": "node scripts/check-readmes.mjs",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "engines": {
     "node": ">=22.12.0"
