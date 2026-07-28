@@ -24,3 +24,4 @@
 - 2026-07-28：建立源码目录 README 契约。
 - 2026-07-28：补充 Agent 主进程 IPC/运行时与最小预加载桥接的目录职责。
 - 2026-07-28：补充 Agent IPC 恢复时序、窗口转发生命周期与构建 preload 工件职责。
+- 2026-07-28：补充 Agent production file sender 的完整 URL hash 路由匹配边界。

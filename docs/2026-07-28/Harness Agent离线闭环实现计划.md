@@ -287,6 +287,23 @@
 
 **验证方式与通过标准：** 新增行为先按预期 RED；聚焦测试覆盖全部复审项且 GREEN。最终 `npm.cmd test`、`npm.cmd run check:readmes`、`npm.cmd run typecheck`、`npm.cmd run build`、`git diff --check` 均退出码 0，且由主进程引用的 `out/preload/index.mjs` 实际存在；不启动 GUI、不推送。
 
+### Task 5 Fix Round 1 Minor：收紧 file sender 的 hash 路由匹配
+
+**修改目标：** 让生产 app file sender 仅在完整序列化 URL 去除 hash 后与配置 app document 完全一致时通过，保留合法 hash 路由并拒绝 `index.html?` 与 `index.html?#...`。
+
+**修改范围与明确不包含的内容：** 仅修改 production file URL 比较、对应 Node 回归测试及 Task 5 文档/README；不修改开发 origin、IPC 生命周期、Preload、Agent 运行时或业务 UI，不启动 GUI、不推送远端。
+
+**涉及的文件：**
+- Modify: `src/main/agent-ipc-security.ts`, `tests/agent-ipc.test.mjs`
+- Modify: `src/main/README.md`, `tests/README.md`, `docs/README.md`, `docs/2026-07-28/README.md`, this implementation plan and `.superpowers/sdd/Harness Agent离线闭环实现计划/task-5-report.md`
+
+**实施步骤：**
+1. 先添加空查询分隔符和空查询加 hash 的 RED 回归，确认既有分段比较会错误放行；保留现有普通 hash 和开发 origin 用例。
+2. 新增只清除 hash 的 URL 序列化比较，production file 分支以此作精确匹配，开发 origin 分支不变。
+3. 回填计划、报告和受影响 README；运行聚焦、全量、README、类型、构建和差异检查，并本地提交。
+
+**验证方式与通过标准：** `index.html#/route` 通过，`index.html?` 和 `index.html?#/route` 均拒绝，既有开发 origin 行为不回归；所有指定质量命令退出码 0。
+
 ### Task 7: 全量验收、文档回填与最终审查
 
 **Files:**
@@ -406,3 +423,9 @@
 - RED：在任何 Fix Round 1 生产改动前，`node --experimental-strip-types --test tests/agent-ipc.test.mjs tests/electron-foundation.test.mjs` 以退出码 1 结束：file hash 路由被拒绝、重复注册计数为 14、生命周期 helper 缺失，且主进程仍引用 `index.js`。同次还发现异步 Mock stream 的临时目录清理可触发 `ENOTEMPTY`，测试清理现使用有限重试。
 - 实际实现：BrowserWindow 改为指向 `preload/index.mjs`。启动 helper 先等待并处理恢复失败，再注册 IPC 和创建窗口；应用退出时统一释放 IPC 与 runtime。页面仅在 `did-finish-load` 后、且 URL 已授权时附着转发；hash 路由保持附着，webContents 销毁或窗口关闭会解绑。sender 策略接受同一 file document 的任意 hash，拒绝 query、其他文件、凭据、畸形 URL、销毁/抛错 frame 和不一致 top frame；开发策略拒绝配置或候选 URL 凭据。IPC 注册新增 `removeHandler` disposer、同一 ipcMain 幂等和陈旧 disposer 保护。
 - GREEN 与验证：聚焦套件通过 14/14；全量 `npm.cmd test` 通过 64/64；`npm.cmd run check:readmes`、`npm.cmd run typecheck`、`npm.cmd run build`、`git diff --check` 均以退出码 0 完成。构建后已直接检查 `out/preload/index.mjs` 存在，文件大小为 5,951 bytes。未启动 GUI，未推送；本轮以 `fix: harden agent ipc lifecycle` 独立本地提交。
+
+### Task 5 Fix Round 1 Minor：收紧 file sender 的 hash 路由匹配
+
+- RED：在修改生产守卫前，新增 `index.html?` 与 `index.html?#/workspace/chat` 回归用例并运行 `node --experimental-strip-types --test tests/agent-ipc.test.mjs`。命令以退出码 1 结束，`index.html?` 被错误放行（`true !== false`），直接证明原有分段比较丢失空查询分隔符。
+- 实际实现：production file 分支现在复制已解析 URL、只清除 `hash`，再比较完整 `href`；因此合法 `index.html#/route` 仍通过，而普通 query、空 query 与空 query 加 hash 都保留在序列化 URL 中并被拒绝。开发 origin 分支未改动。
+- GREEN 与验证：聚焦 IPC 套件通过 10/10；全量 `npm.cmd test` 通过 64/64；`npm.cmd run check:readmes`、`npm.cmd run typecheck`、`npm.cmd run build` 和 `git diff --check` 都以退出码 0 完成。未启动 GUI，未推送；本轮以 `fix: restrict file sender to hash routes` 独立本地提交。

@@ -34,6 +34,12 @@ const parseUrl = (value: string | undefined): URL | undefined => {
   }
 }
 
+const withoutHash = (url: URL): string => {
+  const serialized = new URL(url.href)
+  serialized.hash = ''
+  return serialized.href
+}
+
 const isAllowedUrl = (value: string, policy: AgentSenderPolicy): boolean => {
   const candidate = parseUrl(value)
   if (candidate === undefined) return false
@@ -43,13 +49,10 @@ const isAllowedUrl = (value: string, policy: AgentSenderPolicy): boolean => {
     appPage.protocol === 'file:' &&
     appPage.username === '' &&
     appPage.password === '' &&
-    appPage.search === '' &&
     candidate.protocol === 'file:' &&
     candidate.username === '' &&
     candidate.password === '' &&
-    candidate.search === '' &&
-    candidate.host === appPage.host &&
-    candidate.pathname === appPage.pathname
+    withoutHash(candidate) === withoutHash(appPage)
   ) {
     return true
   }

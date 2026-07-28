@@ -121,6 +121,14 @@ test('Agent sender allowlist permits only file hash routes and rejects query, cr
     false
   )
   assert.equal(
+    isAllowedAgentIpcSender(senderFor('file:///app/renderer/index.html?'), production),
+    false
+  )
+  assert.equal(
+    isAllowedAgentIpcSender(senderFor('file:///app/renderer/index.html?#/workspace/chat'), production),
+    false
+  )
+  assert.equal(
     isAllowedAgentIpcSender(senderFor('file:///app/renderer/other.html#/workspace/chat'), production),
     false
   )
