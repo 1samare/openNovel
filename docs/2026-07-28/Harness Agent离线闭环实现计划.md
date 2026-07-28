@@ -335,12 +335,74 @@
 - Consumes: Tasks 1-6.
 - Produces: verified M0 delivery and evidence-backed final documentation.
 
-- [ ] Run `npm.cmd run check:readmes`, `npm.cmd test`, `npm.cmd run typecheck`, and `npm.cmd run build`.
-- [ ] Start Electron, verify create/stream/approve, cancel, close/restart and resume paths, then terminate only the spawned process tree.
-- [ ] Update README capabilities/limitations and append actual files, deviations and validation results to this plan.
+- [x] Run `npm.cmd run check:readmes`, `npm.cmd test`, `npm.cmd run typecheck`, and `npm.cmd run build`.
+- [x] Start Electron, verify create/stream/approve, cancel, close/restart and resume paths, then terminate only the spawned process tree.
+- [x] Update README capabilities/limitations and append actual files, deviations and validation results to this plan.
 - [ ] Run the full quality gate again after documentation changes.
 - [ ] Commit as `docs: record harness agent verification`.
 - [ ] Dispatch final whole-branch review and resolve all Critical/Important findings before finishing the branch.
+
+### Task 7 Validation Fix Round 1：修复沙箱 Preload 的生产构建格式
+
+**修改目标：** 修复真实生产 Electron 启动时 `window.openNovel.agent` 缺失的问题，使沙箱 Preload 以 Electron 可执行的 CommonJS 工件加载，同时保持 `sandbox: true`、上下文隔离、禁用 Node 集成和最小命名桥接不变。
+
+**修改范围与明确不包含的内容：** 仅调整 electron-vite Preload 输出格式、主进程工件路径、对应架构回归测试及受影响 README/验证记录；不关闭沙箱，不放宽 IPC sender 白名单，不新增依赖，不修改 Agent 公共契约、Orchestrator 或 Harness UI 行为。
+
+**涉及的文件：**
+- Modify: `electron.vite.config.ts`, `README.md`
+- Modify: `src/main/index.ts`, `src/main/README.md`
+- Modify: `tests/electron-foundation.test.mjs`, `tests/README.md`
+- Modify: this implementation plan, `docs/2026-07-28/README.md`
+
+**根因证据：** 生产构建可生成 `out/preload/index.mjs`，但以 `sandbox: true` 启动后 Electron 控制台稳定报告 `Unable to load preload script` 和 `SyntaxError: Cannot use import statement outside a module`；因此渲染页加载成功而 `window.openNovel` 为 `undefined`。electron-vite 5 的本地配置实现显示，`package.json` 为 ESM 时默认选择 `es` 并强制 `.mjs`，显式 `rollupOptions.output.format: 'cjs'` 可切换到沙箱兼容格式。
+
+**实施步骤：**
+1. 先把 Electron 基础架构测试改为要求 Preload 显式输出 CommonJS `.cjs`，运行聚焦测试并确认现有 `.mjs` 配置按预期失败。
+2. 在 electron-vite Preload 构建配置中显式选择 `cjs` 并固定 `.cjs` 工件名，主进程改为加载该工件；保持全部窗口安全选项和 Preload API 表面不变。
+3. 同步受影响目录 README，运行聚焦测试、README 契约、全量测试、类型检查、生产构建和差异检查。
+4. 使用隔离的 Electron `userData` 再次启动生产工件，通过 DevTools Protocol 验证 Preload 无加载异常、八个命名 API 可用，再继续 Task 7 的创建/审批、取消和重启恢复验收。
+
+**验证方式与通过标准：** 聚焦测试先 RED 后 GREEN；`out/preload/index.cjs` 存在且主进程仅引用该工件；真实沙箱窗口中 `window.openNovel.agent` 暴露精确八个方法，控制台无 Preload 加载失败；全部质量门禁退出码为 0。
+
+### Task 7 Validation Fix Round 2：保持生产窗口生命周期引用
+
+**修改目标：** 修复真实生产验收中页面调试目标短暂建立后应用以退出码 0 自动结束的问题，确保主进程持有每个活动 `BrowserWindow`，仅在窗口真实关闭后释放引用。
+
+**修改范围与明确不包含的内容：** 仅修改主进程窗口引用生命周期、对应静态架构回归测试及同目录 README/验证记录；不改变窗口安全选项、路由、IPC、Agent 运行时或关闭全部窗口时的 Windows 退出语义。
+
+**涉及的文件：**
+- Modify: `src/main/index.ts`, `src/main/README.md`
+- Modify: `tests/electron-foundation.test.mjs`, `tests/README.md`
+- Modify: this implementation plan, `docs/2026-07-28/README.md`
+
+**根因证据：** 隔离生产实例能够创建远程调试 page target 和 `agent-runs` 数据目录，随后无异常、以退出码 0 结束；这排除启动/加载崩溃并对应既有 `window-all-closed → app.quit()` 路径。`createMainWindow` 的返回值在启动和 activate 路径均被丢弃，模块没有活动窗口集合；Electron BrowserWindow 文档要求在 `closed` 后移除窗口引用，官方示例也将窗口生命周期作为主进程职责。
+
+**实施步骤：**
+1. 先新增架构回归测试，要求模块级活动窗口集合在创建时加入窗口、`closed` 时删除；运行聚焦测试确认现有代码按预期失败。
+2. 以最小改动保留活动窗口强引用，并复用既有关闭回调释放；不更改窗口创建参数和退出处理。
+3. 同步 README，重建后再次启动隔离生产实例，确认调试目标和主进程持续存活，再执行八方法桥接和闭环验收。
+
+**验证方式与通过标准：** 聚焦测试先 RED 后 GREEN；生产窗口至少跨越验收轮询周期保持存活，主动关闭后进程正常退出；原有生命周期、IPC、类型和构建测试全部通过。
+
+### Task 7 Validation Fix Round 3：提供可观察且可中止的生产 Mock 流
+
+**修改目标：** 让生产 Harness 中的 Mock Executor 片段之间存在短暂、可中止的节奏，使用户能够观察流式输出、在运行中取消，并稳定完成 `running → interrupted → resume` 的真实重启验收。
+
+**修改范围与明确不包含的内容：** 仅为主进程 Agent runtime 增加可注入 `ExecutorDelay`，并由生产入口注入固定的短延迟；保持 Agent 核心 `MockExecutor` 默认即时行为和现有测试速度，不改变文本片段、状态机、事件、持久化格式、IPC 或 UI。
+
+**涉及的文件：**
+- Modify: `src/main/agent-runtime.ts`, `src/main/index.ts`, `src/main/README.md`
+- Modify: `tests/agent-ipc.test.mjs`, `tests/electron-foundation.test.mjs`, `tests/README.md`
+- Modify: this implementation plan, `docs/2026-07-28/README.md`
+
+**根因证据：** 真实 Electron 取消验收中，`createRun` 返回 `queued` 后立即调用 `cancelRun`，持久化事件仍已包含完整 analysis 的两个 `step.delta`、`step.completed` 和 `approval.requested`，说明生产 runtime 使用 `new MockExecutor()` 的即时默认值，无法为界面观察、运行中取消或关闭重启提供稳定窗口。
+
+**实施步骤：**
+1. 先增加 runtime 行为测试，向 `createAgentRuntime` 传入受控 delay，要求 Run 停在 `running` 且未输出片段；增加入口契约测试要求生产传入可中止延迟，确认现有实现 RED。
+2. 在 runtime 选项中接收 `ExecutorDelay` 并传给 Mock Executor；在主入口实现固定短延迟，AbortSignal 触发时清理定时器并立即释放。
+3. 同步 README，运行聚焦测试和完整质量门禁；重建真实应用后验证可见分片、运行中取消，以及关闭/重启后的 interrupted/resume/approve/completed 路径。
+
+**验证方式与通过标准：** 受控 delay 测试证明生产组合层可暂停且不会提前写入 chunk；入口保留可中止延迟；真实运行可在 `running` 检查点关闭，重启后为 `interrupted`，恢复后无重复片段并最终完成；全部门禁通过。
 
 ## 实际结果
 
@@ -480,3 +542,17 @@
 - 实际实现：连续事件合并后，`run.failed` 调用既有带 Run revision/generation 保护的 `refreshRun`；失败结果保留 `重试刷新 Run`，不会抛出到事件队列，后续 Run 仍可处理。`<=520px` 顶栏增加最小宽度与 `overflow-x` 边界，secondary link 明确使用居中 `inline-flex`、44px 最小高度和不收缩的命中区。
 - GREEN：完整 Harness 聚焦套件通过 12/12，覆盖失败回读、刷新失败后的其他 Run 事件、精确刷新重试、安全错误详情与紧凑顶栏样式契约。
 - 最终验证：`npm.cmd run check:readmes` 通过；`npm.cmd test` 通过 76/76；`npm.cmd run typecheck` 的 Node 与 Web 检查通过；`npm.cmd run build` 的 main、preload 与 renderer 生产构建通过；`git diff --check` 通过（仅 Git LF/CRLF 提示）。未启动 GUI，未推送远端。
+
+### Task 7：全量验收、生产验证修复与文档回填
+
+- 实际涉及文件：`electron.vite.config.ts`；`src/main/index.ts`、`src/main/agent-runtime.ts` 及 main README；`tests/electron-foundation.test.mjs`、`tests/agent-ipc.test.mjs` 及 tests README；根 README、`docs/README.md`、本计划和日期 README。未新增依赖，未改变公共 Agent 契约、schemaVersion、IPC API 或 Harness UI 结构。
+- 验收偏差：静态测试和生产构建成功不足以证明应用可用。首次真实启动发现沙箱无法执行默认 ESM `.mjs` Preload；修复后又发现主进程未保留活动窗口引用而正常自动退出；真实取消验证进一步证明即时 Mock 流无法稳定观察或制造运行中重启检查点。三项均先补计划和 RED 回归，再实施最小修复。
+- Validation Fix Round 1：Electron 控制台稳定报告 `Unable to load preload script` 与 `Cannot use import statement outside a module`。回归测试先因 `.mjs` 连线和缺少 CJS 输出配置出现 2 项失败；显式输出 `out/preload/index.cjs` 并更新主进程路径后，聚焦 Electron 基础套件通过。
+- Validation Fix Round 2：隔离实例曾创建 page target 与 userData 后以退出码 0 自动结束。窗口引用架构用例先 1 项 RED；主进程活动集合在创建时加入 BrowserWindow、`closed` 时删除后，窗口跨验收轮询保持存活且主动关闭后正常退出。
+- Validation Fix Round 3：即时生产 Mock 在 `createRun` 返回后已完成整个 analysis。runtime delay 注入和入口 pacing 契约先出现 2 项 RED；实现后受控 delay 测试证明 Run 可停在 `running` 且尚无 chunk，生产入口以 AbortSignal 可释放的 500ms 延迟提供可观察流。首轮 GREEN 曾因测试只等待 20 次 `setImmediate` 在真实文件写入前误判，改为有上限的条件等待后稳定通过。
+- 真实安全桥：隔离生产窗口中 `window.openNovel.agent` 精确包含 `createRun/getRun/listRuns/getEvents/approveRun/cancelRun/resumeRun/subscribeEvents` 八个方法，控制台没有 Preload 加载或运行异常。
+- 真实 UI 正常路径：通过页面 Prompt 与按钮创建 Run；650ms 时分析区只显示首片段；等待审批卡出现后点击“审批通过”；最终状态为“已完成”，显示完整 final，时间线 13 条，审批卡消失且无 alert。
+- 真实 UI 取消路径：在首个 analysis 片段后点击“取消 Run”；最终状态为“已取消”，时间线 5 条，取消按钮消失且无 alert。
+- 真实重启恢复：关闭前 Run 为 `running`、analysis 输出 1 个片段、检查点 `{ phase: 'analysis', nextChunkIndex: 1 }`、事件序号 1–4；同一 userData 重启后自动成为 `interrupted`，显式恢复后只补 analysis 第二片段，审批后完成。最终事件序号严格为 1–16，四个 `step.delta` 分别对应两个 analysis 和两个 final 文本，无重复片段。
+- 首轮全量门禁：`npm.cmd run check:readmes` 通过；`npm.cmd test` 通过 80/80（包含原有测试）；`npm.cmd run typecheck` 的 Node/Web 检查通过；最新 `npm.cmd run build` 生成 main、`out/preload/index.cjs` 和 renderer 产物。
+- 运行边界：验收只使用本地确定性 Mock 与隔离 userData，不访问网络模型、不写真实用户正文；未生成安装包，未推送远端。

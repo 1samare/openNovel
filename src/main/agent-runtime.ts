@@ -1,4 +1,4 @@
-import { MockExecutor } from '../agent/mock-executor.ts'
+import { MockExecutor, type ExecutorDelay } from '../agent/mock-executor.ts'
 import { AgentOrchestrator } from '../agent/orchestrator.ts'
 import { JsonRunRepository } from '../agent/repository.ts'
 import type { AgentResult, RunListResult } from '../shared/agent.ts'
@@ -14,6 +14,7 @@ export type AgentRuntimeOptions = {
   storageRoot: string
   senderPolicy: AgentSenderPolicy
   logger?: AgentLogger
+  executorDelay?: ExecutorDelay
 }
 
 export type AgentRuntime = {
@@ -99,10 +100,11 @@ export const bindAgentWindowForwarding = (
 export const createAgentRuntime = ({
   storageRoot,
   senderPolicy,
-  logger = createAgentLogger()
+  logger = createAgentLogger(),
+  executorDelay
 }: AgentRuntimeOptions): AgentRuntime => {
   const repository = new JsonRunRepository(storageRoot)
-  const executor = new MockExecutor()
+  const executor = new MockExecutor(executorDelay === undefined ? {} : { delay: executorDelay })
   const orchestrator = new AgentOrchestrator({ repository, executor })
   const targets = new Set<AgentLiveWebContents>()
   const unsubscribe = orchestrator.subscribe((event) => {

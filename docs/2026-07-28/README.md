@@ -9,6 +9,7 @@
 - `Harness Agent离线闭环架构设计.md`：已批准的运行时边界、数据流与安全策略。
 - `Harness Agent离线闭环实现计划.md`：按 TDD 和子 Agent 审查执行的任务清单。
 - Task 6 记录：AI 对话 Harness UI、渲染层事件合并和验证结果已回填至实施计划；Fix Round 1 记录异步状态、重试、可访问性和窄屏布局加固，并补齐连续失败事件的安全详情回读与 520px 顶栏命中区。
+- Task 7 记录：全量生产验收、沙箱 Preload CommonJS 工件、生产 BrowserWindow 活动引用生命周期，以及可观察且可中止的生产 Mock 流修复计划与真实 Electron 通过标准。
 
 ## 依赖边界
 
@@ -55,3 +56,7 @@
 - 2026-07-28：登记 Task 6 Fix Round 1 的异步状态机、可重试操作、可访问性与响应式复审修复计划。
 - 2026-07-28：回填 Task 6 Fix Round 1 的拒绝规范化、命令锁、事件队列恢复和响应式验证结果。
 - 2026-07-28：登记 Task 6 Fix Round 1 复审收尾的 `run.failed` 回读、刷新重试与紧凑顶栏样式契约。
+- 2026-07-28：登记 Task 7 Validation Fix Round 1，修复真实生产启动中沙箱 Preload 无法执行 ESM `.mjs` 工件的问题。
+- 2026-07-28：登记 Task 7 Validation Fix Round 2，修复生产窗口因主进程未保留活动引用而自动退出的问题。
+- 2026-07-28：登记 Task 7 Validation Fix Round 3，为真实流式、运行中取消和重启恢复验收增加生产 Mock pacing 注入。
+- 2026-07-28：回填 Task 7 的 80 项测试、生产构建、真实 UI 审批/取消和检查点重启恢复验收结果。

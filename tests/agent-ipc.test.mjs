@@ -395,3 +395,36 @@ test('runtime recovers persisted Runs and forwards cloned events only to authori
   assert.equal(sent[0][0], AGENT_IPC_CHANNELS.event)
   assert.notEqual(sent[0][1], created.data.events[0])
 })
+
+test('runtime passes an injected delay to the production Mock Executor composition', async (t) => {
+  const root = await mkdtemp(join(tmpdir(), 'open-novel-agent-delay-'))
+  t.after(() => rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 }))
+
+  let delayCalls = 0
+  let releaseFirstDelay
+  const runtime = createAgentRuntime({
+    storageRoot: root,
+    senderPolicy: { appPageUrl: 'file:///app/renderer/index.html' },
+    logger: createAgentLogger(() => undefined),
+    executorDelay: async () => {
+      delayCalls += 1
+      if (delayCalls === 1) {
+        await new Promise((resolve) => { releaseFirstDelay = resolve })
+      }
+    }
+  })
+
+  const created = await runtime.orchestrator.createRun('Observe the stream')
+  assert.equal(created.ok, true)
+  for (let attempt = 0; attempt < 200 && delayCalls === 0; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+
+  assert.equal(delayCalls, 1)
+  const paused = await runtime.orchestrator.getRun(created.data.id)
+  assert.equal(paused.ok, true)
+  assert.equal(paused.data.status, 'running')
+  assert.equal(paused.data.output.analysis, '')
+
+  releaseFirstDelay()
+})

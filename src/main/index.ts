@@ -11,6 +11,25 @@ import {
 } from './agent-runtime.ts'
 import type { AgentSenderPolicy } from './agent-ipc-security.ts'
 
+const activeWindows = new Set<BrowserWindow>()
+const MOCK_CHUNK_DELAY_MS = 500
+
+const delayMockChunk = (signal: AbortSignal): Promise<void> => new Promise((resolve) => {
+  if (signal.aborted) {
+    resolve()
+    return
+  }
+
+  let timer: ReturnType<typeof setTimeout>
+  const finish = (): void => {
+    clearTimeout(timer)
+    signal.removeEventListener('abort', finish)
+    resolve()
+  }
+  timer = setTimeout(finish, MOCK_CHUNK_DELAY_MS)
+  signal.addEventListener('abort', finish, { once: true })
+})
+
 const senderPolicy = (): AgentSenderPolicy => {
   const devServerUrl = process.env.ELECTRON_RENDERER_URL
   if (devServerUrl !== undefined) {
@@ -34,13 +53,15 @@ const createMainWindow = (runtime: AgentRuntime): BrowserWindow => {
     title: APP_NAME,
     backgroundColor: '#f6f7fb',
     webPreferences: {
-      preload: join(__dirname, '../preload/index.mjs'),
+      preload: join(__dirname, '../preload/index.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
     }
   })
 
+  activeWindows.add(mainWindow)
+  mainWindow.once('closed', () => activeWindows.delete(mainWindow))
   mainWindow.once('ready-to-show', () => mainWindow.show())
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   bindAgentWindowForwarding(mainWindow, runtime)
@@ -65,7 +86,8 @@ let disposeAgentRuntime = (): void => undefined
 app.whenReady().then(async () => {
   const runtime = createAgentRuntime({
     storageRoot: join(app.getPath('userData'), 'agent-runs'),
-    senderPolicy: senderPolicy()
+    senderPolicy: senderPolicy(),
+    executorDelay: delayMockChunk
   })
   disposeAgentRuntime = await initializeAgentRuntime({
     runtime,

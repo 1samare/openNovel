@@ -10,7 +10,17 @@ export default defineConfig({
       }
     }
   },
-  preload: {},
+  preload: {
+    build: {
+      rollupOptions: {
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].cjs',
+          chunkFileNames: '[name]-[hash].cjs'
+        }
+      }
+    }
+  },
   renderer: {
     resolve: {
       alias: {

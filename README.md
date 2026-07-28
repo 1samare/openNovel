@@ -1,6 +1,6 @@
 # OpenNovel
 
-OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应用。本仓库当前交付 Electron + Vue 3 + TypeScript 基础架构，不包含业务功能。
+OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应用。本仓库当前交付 Electron + Vue 3 + TypeScript 基础架构和首个离线 Agent Harness 垂直闭环，不包含小说 CRUD 或真实模型调用。
 
 ## 目录用途
 
@@ -31,6 +31,8 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 - 2026-07-28：更新 Agent 最小命名桥接及其主进程 sender 安全边界说明。
 
 - 2026-07-28：登记 Harness Agent UI Fix Round 1 的异步状态、重试、可访问性和响应式加固范围。
+
+- 2026-07-28：显式将 Electron Preload 构建为沙箱兼容的 CommonJS `.cjs` 工件，并同步生产窗口连线。
 
 ## 技术栈
 
@@ -96,20 +98,24 @@ docs/            按日期归档的设计和修改计划
 - Vue 应用、Hash Router 和公共工作台布局；
 - 项目中心及产品一级模块占位页面；
 - Agent Run 的公共契约、运行时校验和纯状态机；
-- `/workspace/chat` 的 Harness Agent 工作台：可创建 Run、查看流式分析与时间线、审批、取消、恢复、本地损坏记录诊断及连续失败事件的持久化安全详情；
+- 每 Run 一份 schema v1 JSON 的原子持久化、损坏记录隔离、事件补取和 analysis/final 检查点恢复；
+- `/workspace/chat` 的 Harness Agent 工作台：可创建 Run、查看有节奏的本地 Mock 流与时间线、审批、运行中取消、重启后恢复、本地损坏记录诊断及连续失败事件的持久化安全详情；
+- 沙箱化 CommonJS Preload、固定 Agent IPC 白名单、来源校验和不记录正文的结构化日志；
 - TypeScript 类型检查、结构测试和生产构建命令。
 
 尚未实现：
 
 - 小说项目增删改查；
-- 本地数据库和文件持久化；
-- AI 模型配置、调用和流式输出；
+- 小说业务数据库、项目文件和正文持久化；
+- 真实 AI 模型配置、调用、任意工具和自定义 Skill；
 - 正文编辑器、版本管理和导入导出；
 - 应用安装包生成。
 
+当前 Harness 为单用户、单窗口的 M0 实现，使用确定性 Mock 文本；Prompt、事件和输出以本地明文 JSON 保存在 Electron `userData/agent-runs`，尚未提供加密、清理界面或跨设备同步。
+
 ## 安全边界
 
-渲染进程启用上下文隔离与沙箱，并关闭 Node.js 集成。预加载层不暴露通用 Electron、Node.js、IPC 或文件系统能力；它只提供固定的 `window.openNovel.agent` 命令与校验、克隆后的 Agent 事件。主进程仅接受当前顶层应用文件页或精确开发服务器 origin 的请求。
+渲染进程启用上下文隔离与沙箱，并关闭 Node.js 集成。预加载层以沙箱兼容的 CommonJS 工件运行，不暴露通用 Electron、Node.js、IPC 或文件系统能力；它只提供固定的 `window.openNovel.agent` 命令与校验、克隆后的 Agent 事件。主进程仅接受当前顶层应用文件页或精确开发服务器 origin 的请求。
 
 ## 修改计划约定
 

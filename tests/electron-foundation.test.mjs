@@ -12,7 +12,30 @@ test('Electron 窗口采用隔离且无 Node 注入的安全默认值', async ()
   assert.match(source, /nodeIntegration:\s*false/)
   assert.match(source, /sandbox:\s*true/)
   assert.match(source, /setWindowOpenHandler/)
-  assert.match(source, /preload:\s*join\(__dirname, '\.\.\/preload\/index\.mjs'\)/)
+  assert.match(source, /preload:\s*join\(__dirname, '\.\.\/preload\/index\.cjs'\)/)
+})
+
+test('沙箱 Preload 显式构建为 CommonJS 工件', async () => {
+  const source = await readProjectFile('electron.vite.config.ts')
+
+  assert.match(source, /preload:\s*\{[\s\S]*?rollupOptions:\s*\{[\s\S]*?output:\s*\{[\s\S]*?format:\s*'cjs'/)
+  assert.match(source, /entryFileNames:\s*'\[name\]\.cjs'/)
+})
+
+test('主进程持有活动窗口引用直到窗口关闭', async () => {
+  const source = await readProjectFile('src/main/index.ts')
+
+  assert.match(source, /const activeWindows = new Set<BrowserWindow>\(\)/)
+  assert.match(source, /activeWindows\.add\(mainWindow\)/)
+  assert.match(source, /mainWindow\.once\('closed', \(\) => activeWindows\.delete\(mainWindow\)\)/)
+})
+
+test('生产入口为 Mock 流注入可中止的片段延迟', async () => {
+  const source = await readProjectFile('src/main/index.ts')
+
+  assert.match(source, /const delayMockChunk = \(signal: AbortSignal\): Promise<void>/)
+  assert.match(source, /signal\.addEventListener\('abort', finish, \{ once: true \}\)/)
+  assert.match(source, /executorDelay:\s*delayMockChunk/)
 })
 
 test('预加载层仅暴露命名 Agent 桥接且不暴露通用 Electron 或 Node API', async () => {
