@@ -43,3 +43,5 @@
 - 2026-07-28：回填 Task 4 Fix Round 1 的 RED/GREEN、共享 Run 列表契约与全量验证结果。
 - 2026-07-28：登记 Task 4 Fix Round 1 复审追加的遗留审批证明修复与测试加固计划。
 - 2026-07-28：回填 Task 4 Fix Round 1 复审追加的 legacy 审批证明修复与 54 项全量验证结果。
+- 2026-07-28：登记 Task 4 Fix Round 1 剩余 Minor 的 Mock final stream 覆盖计划。
+- 2026-07-28：回填 Task 4 Fix Round 1 剩余 Minor 的活动 final Mock stream 覆盖结果。

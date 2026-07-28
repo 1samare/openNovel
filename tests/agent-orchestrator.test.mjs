@@ -592,6 +592,15 @@ test('mock executor delays active analysis and final streams and stops when abor
   releaseDelay()
   assert.deepEqual(await firstAnalysis, { value: 'analysis-2', done: false })
 
+  const activeFinalController = new AbortController()
+  const activeFinalIterator = executor.stream({
+    prompt: 'Prompt.', phase: 'final', nextChunkIndex: 1, signal: activeFinalController.signal
+  })[Symbol.asyncIterator]()
+  const firstActiveFinal = activeFinalIterator.next()
+  await eventually(async () => releaseDelay)
+  releaseDelay()
+  assert.deepEqual(await firstActiveFinal, { value: 'final-2', done: false })
+
   const finalController = new AbortController()
   const finalIterator = executor.stream({
     prompt: 'Prompt.', phase: 'final', nextChunkIndex: 0, signal: finalController.signal
@@ -600,7 +609,11 @@ test('mock executor delays active analysis and final streams and stops when abor
   await eventually(async () => releaseDelay)
   finalController.abort()
   assert.deepEqual(await firstFinal, { value: undefined, done: true })
-  assert.deepEqual(delaySignals, [analysisController.signal, finalController.signal])
+  assert.deepEqual(delaySignals, [
+    analysisController.signal,
+    activeFinalController.signal,
+    finalController.signal
+  ])
 })
 
 test('serializes genuinely concurrent duplicate approval and cancellation commands', async () => {

@@ -370,3 +370,6 @@
 - 复审追加实际实现：编排器从最后一条 approval.requested 后查找 approval.resolved；恢复 running snapshot 时，在添加 run.interrupted 的同一持久化 mutation 中将缺少证明的 final checkpoint 修正为 analysis delta 数量导出的 analysis checkpoint。`resumeRun` 与 `streamPhase` 都拒绝无证明的 final，形成恢复与执行入口两层防线；显式 approval.resolved 仍照常授权 final。
 - 复审追加 GREEN：聚焦编排器套件通过 16/16，包括 seeded legacy repair 后重新等待审批、直接 final 防线、进行中 delay 中止和并发重复命令。
 - 复审追加验证：`npm.cmd test` 通过 54/54；`npm.cmd run check:readmes` 通过；`npm.cmd run typecheck` 的 Node 与 Web 检查均通过；`git diff --check` 未报告空白错误（仅有 Git 的 LF/CRLF 转换提示）。
+- 复审 Minor 计划：直接消费 MockExecutor 的 active final stream，断言 `finalChunks` 与 `nextChunkIndex` 的选择结果；保持现有进行中 abort 覆盖，不改动生产实现。
+- 复审 Minor 结果：在同一受控延迟 executor 用例中，analysis 从索引 1 输出 `analysis-2`，活动 final 从索引 1 输出 `final-2`，而另一个 final 流在 delay 期间中止且不输出。该测试仅扩展覆盖，现有实现无需修改。
+- 复审 Minor 验证：聚焦编排器套件通过 16/16；`npm.cmd test` 通过 54/54；`npm.cmd run check:readmes` 与 `npm.cmd run typecheck` 通过；`git diff --check` 无空白错误（仅 Git LF/CRLF 提示）。
