@@ -240,6 +240,74 @@ test('cancels active work before serially committing the cancellation', async ()
   assert.equal(cancelled.data.output.analysis, 'analysis-first')
 })
 
+test('does not let a stale list result replace a concurrently committed cancellation', async () => {
+  const repository = new MemoryRepository()
+  const orchestrator = createOrchestrator(repository, new BlockingExecutor())
+  const created = await orchestrator.createRun('Keep cancellation authoritative.')
+  await eventually(async () => {
+    const run = await orchestrator.getRun(created.data.id)
+    return run.ok && run.data.checkpoint.nextChunkIndex === 1
+  })
+
+  let releaseList
+  let markListStarted
+  const listGate = new Promise((resolve) => { releaseList = resolve })
+  const listStarted = new Promise((resolve) => { markListStarted = resolve })
+  const readList = repository.list.bind(repository)
+  repository.list = async () => {
+    const captured = await readList()
+    markListStarted()
+    await listGate
+    return captured
+  }
+
+  const listing = orchestrator.listRuns()
+  await listStarted
+  const cancelled = await orchestrator.cancelRun(created.data.id)
+  assert.equal(cancelled.ok, true)
+  releaseList()
+  await listing
+
+  const current = await orchestrator.getRun(created.data.id)
+  assert.equal(current.ok, true)
+  assert.equal(current.data.status, 'cancelled')
+  assert.equal(current.data.events.at(-1).type, 'run.cancelled')
+})
+
+test('does not append step.started after cancellation wins the run mutation queue', async () => {
+  const repository = new MemoryRepository()
+  const orchestrator = createOrchestrator(repository, new BlockingExecutor())
+  let releaseRunningRead
+  let markRunningRead
+  const runningReadGate = new Promise((resolve) => { releaseRunningRead = resolve })
+  const runningReadStarted = new Promise((resolve) => { markRunningRead = resolve })
+  const loadRun = orchestrator.loadRun.bind(orchestrator)
+  let intercepted = false
+  orchestrator.loadRun = async (id) => {
+    const loaded = await loadRun(id)
+    if (!intercepted && loaded.ok && loaded.data?.status === 'running') {
+      intercepted = true
+      markRunningRead()
+      await runningReadGate
+    }
+    return loaded
+  }
+
+  const created = await orchestrator.createRun('Cancel before the step begins.')
+  await runningReadStarted
+  const cancelled = await orchestrator.cancelRun(created.data.id)
+  assert.equal(cancelled.ok, true)
+  releaseRunningRead()
+  await new Promise((resolve) => setTimeout(resolve, 10))
+
+  const current = await orchestrator.getRun(created.data.id)
+  assert.equal(current.ok, true)
+  assert.equal(current.data.status, 'cancelled')
+  assert.deepEqual(current.data.events.map((event) => event.type), [
+    'run.created', 'run.started', 'run.cancelled'
+  ])
+})
+
 test('maps executor failures and unknown ids to exact public errors', async () => {
   const repository = new MemoryRepository()
   const orchestrator = createOrchestrator(repository, new FailingExecutor())
@@ -332,6 +400,37 @@ test('recovers persisted running work as interrupted and resumes from its checkp
   assert.deepEqual(paused.events.find((event) => event.type === 'run.resumed'), {
     runId: 'run-1', sequence: 6, type: 'run.resumed', timestamp: times[1], payload: {}
   })
+})
+
+test('starts a persisted queued run during restart recovery instead of leaving it unreachable', async () => {
+  const repository = new MemoryRepository()
+  const queued = snapshot({
+    id: 'queued-run',
+    status: 'queued',
+    events: [{
+      runId: 'queued-run', sequence: 1, type: 'run.created', timestamp: times[0], payload: {}
+    }]
+  })
+  repository.runs.set(queued.id, clone(queued))
+  const restarted = createOrchestrator(
+    repository,
+    new SequenceExecutor({ analysis: ['recovered-analysis'], final: ['recovered-final'] })
+  )
+
+  const recovered = await restarted.recoverInterruptedRuns()
+  assert.equal(recovered.ok, true)
+  assert.equal(recovered.data.runs[0].status, 'running')
+  assert.equal(recovered.data.runs[0].events.at(-1).type, 'run.started')
+
+  const awaiting = await eventually(async () => {
+    const run = await restarted.getRun(queued.id)
+    return run.ok && run.data.status === 'awaiting_approval' ? run.data : undefined
+  })
+  assert.equal(awaiting.output.analysis, 'recovered-analysis')
+  assert.deepEqual(awaiting.events.map((event) => event.type), [
+    'run.created', 'run.started', 'step.started', 'step.delta', 'step.completed',
+    'approval.requested'
+  ])
 })
 
 test('keeps the analysis checkpoint until approval.requested persists, then recovers without final bypass', async () => {

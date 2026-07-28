@@ -124,9 +124,6 @@ export class AgentOrchestrator {
 
   async listRuns(): Promise<AgentResult<RunListResult>> {
     const listed = await this.repository.list()
-    for (const run of listed.runs) {
-      this.runs.set(run.id, run)
-    }
     return { ok: true, data: listed }
   }
 
@@ -207,6 +204,14 @@ export class AgentOrchestrator {
 
     const recovered: AgentRun[] = []
     for (const run of listed.runs) {
+      if (run.status === 'queued') {
+        const started = await this.beginPhase(run.id, 'analysis', 'run.started')
+        if (!started.ok) {
+          return started
+        }
+        recovered.push(started.data)
+        continue
+      }
       if (run.status !== 'running') {
         recovered.push(run)
         continue
@@ -440,6 +445,9 @@ export class AgentOrchestrator {
     payload: AgentEvent['payload']
   ): Promise<AgentResult<AgentRun>> {
     return this.mutate(id, (run) => {
+      if (run.status !== 'running') {
+        return statusError(run.status, 'running')
+      }
       const timestamp = this.clock()
       return {
         ok: true,

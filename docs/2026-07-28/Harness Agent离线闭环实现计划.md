@@ -404,6 +404,28 @@
 
 **验证方式与通过标准：** 受控 delay 测试证明生产组合层可暂停且不会提前写入 chunk；入口保留可中止延迟；真实运行可在 `running` 检查点关闭，重启后为 `interrupted`，恢复后无重复片段并最终完成；全部门禁通过。
 
+### Task 7 Final Review Fix Round 1：关闭 Orchestrator 陈旧读、取消竞态与 queued 恢复缺口
+
+**修改目标：** 修复最终全分支代码审查确认的一个 Critical 和两个 Important：并发 `listRuns` 以陈旧仓储快照覆盖已提交内存状态、取消后仍可能追加 `step.started`、以及重启遗留 `queued` Run 永久无法执行。
+
+**修改范围与明确不包含的内容：** 仅调整 Orchestrator 的列表查询副作用、步骤开始状态前置条件和 queued 启动恢复，并补充确定性并发/恢复测试；不改变公共类型、IPC、Repository 格式、Executor 文本、UI 或生产 pacing。
+
+**涉及的文件：**
+- Modify: `src/agent/orchestrator.ts`, `src/agent/README.md`
+- Modify: `tests/agent-orchestrator.test.mjs`, `tests/README.md`
+- Modify: this implementation plan, `docs/2026-07-28/README.md`
+
+**技术核对：** `listRuns()` 当前在 repository read 完成后无条件执行 `this.runs.set`，该路径不进入每 Run mutation queue，确实可在取消持久化后回写更旧的 running 快照；`appendEvent()` 是 `step.started` 的唯一调用点且未验证状态，取消在其前排队时会形成 `run.cancelled → step.started`；恢复循环只处理 running，而 `resumeRun` 只接受 interrupted，因此 persisted queued 快照确实成为不可达状态。
+
+**实施步骤：**
+1. 用受控 stale list gate 先捕获快照、提交取消、再释放列表读取，断言内存仍为 cancelled 且保留 `run.cancelled`；确认现有实现 RED。
+2. 在 `run.started` 通知中触发并等待取消，断言取消后不得追加 `step.started`；确认现有实现 RED。
+3. 以 seeded queued 快照重启，断言恢复结果先持久化 `run.started` 为 running，随后执行到 awaiting_approval；确认现有实现 RED。
+4. 逐项最小修复：移除 list 查询对内存 map 的回写；在 step.started mutation 内要求 running；恢复 queued 时调用既有 `beginPhase(..., 'analysis', 'run.started')`。
+5. 同步 README，运行聚焦、全量、README、类型、构建和差异检查；重新执行独立规格/代码质量审查。
+
+**验证方式与通过标准：** 三个确定性用例先 RED 后 GREEN；取消状态和事件不会被陈旧列表覆盖，`run.cancelled` 后没有步骤事件，queued 重启不再停滞；全部 80+ 测试及质量门禁通过，最终审查无 Critical/Important。
+
 ## 实际结果
 
 ### Task 1：README 目录契约、项目规则与 CI 基础
@@ -556,3 +578,10 @@
 - 真实重启恢复：关闭前 Run 为 `running`、analysis 输出 1 个片段、检查点 `{ phase: 'analysis', nextChunkIndex: 1 }`、事件序号 1–4；同一 userData 重启后自动成为 `interrupted`，显式恢复后只补 analysis 第二片段，审批后完成。最终事件序号严格为 1–16，四个 `step.delta` 分别对应两个 analysis 和两个 final 文本，无重复片段。
 - 首轮全量门禁：`npm.cmd run check:readmes` 通过；`npm.cmd test` 通过 80/80（包含原有测试）；`npm.cmd run typecheck` 的 Node/Web 检查通过；最新 `npm.cmd run build` 生成 main、`out/preload/index.cjs` 和 renderer 产物。
 - 运行边界：验收只使用本地确定性 Mock 与隔离 userData，不访问网络模型、不写真实用户正文；未生成安装包，未推送远端。
+
+### Task 7 Final Review Fix Round 1：Orchestrator 并发与恢复闭环
+
+- RED：先加入陈旧 list gate、首次 running 读取 gate 和 seeded queued snapshot 三个确定性用例。首次聚焦运行复现陈旧 list 把已取消内存状态改回 running，以及 queued 恢复仍返回 queued；随后收紧取消用例时序后，`node --experimental-strip-types --test tests/agent-orchestrator.test.mjs` 以 19 项中的 3 项失败结束，并精确出现 `run.cancelled → step.started`。
+- 实际实现：`listRuns` 仅返回仓储列表与 issues，不再回写 `this.runs`；唯一的 `step.started` 追加路径在每 Run mutation queue 内验证当前仍为 running；启动恢复对 queued 快照调用既有 `beginPhase(id, 'analysis', 'run.started')`，而遗留 running 仍按原规则持久化为 interrupted 并等待用户显式恢复。
+- GREEN：三个回归用例分别单独通过，完整 Orchestrator 聚焦套件通过 19/19；取消状态保持权威、取消后无步骤事件、queued 重启执行到 awaiting_approval。
+- 全量验证：`npm.cmd run check:readmes` 通过；`npm.cmd test` 通过 83/83；`npm.cmd run typecheck` 的 Node/Web 检查通过；`npm.cmd run build` 成功生成 main、CommonJS preload 和 renderer 产物。

@@ -36,3 +36,6 @@
 - 2026-07-28：新增 Mock Executor 与 Agent Orchestrator，以串行持久化事件驱动审批、取消、失败与恢复闭环。
 - 2026-07-28：收紧审批/恢复原子边界，隔离订阅者异常与变异，并保留仓储读取错误和 Run 列表诊断。
 - 2026-07-28：为 legacy schema-v1 final checkpoint 增加持久化审批证明与恢复修正，并在 final 流入口执行防御性授权检查。
+- 2026-07-28：移除 `listRuns` 对 Orchestrator 权威内存状态的回写，避免陈旧列表覆盖并发提交结果。
+- 2026-07-28：在单 Run mutation queue 内再次校验 `step.started` 的 running 前置状态，禁止取消提交后追加步骤事件。
+- 2026-07-28：启动恢复时自动执行持久化 queued Run，关闭 `run.created` 已提交而异步 driver 尚未启动的崩溃窗口。
