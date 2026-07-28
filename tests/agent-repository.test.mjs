@@ -174,26 +174,41 @@ test('rejects an envelope with extra top-level keys through get and list', async
   })
 })
 
-test('rejects an invalid run without replacing the existing snapshot', async (t) => {
+test('rejects malformed public values without replacing the existing snapshot', async (t) => {
   const storageRoot = await createStorage(t)
   const repository = new JsonRunRepository(storageRoot)
   const validRun = createRun()
   await repository.save(validRun)
-
-  const result = await repository.save(createRun({ prompt: '' }))
-
-  assert.deepEqual(result, {
-    ok: false,
-    error: {
-      code: 'VALIDATION_ERROR',
-      message: 'Run snapshot failed validation',
-      retryable: false
-    }
+  const snapshotPath = join(storageRoot, 'run-1.json')
+  const originalBytes = await readFile(snapshotPath)
+  const publicLookingError = Object.assign(new Error('Will not survive JSON'), {
+    code: 'EXECUTION_FAILED',
+    retryable: true,
+    extra: 'camouflage'
   })
-  assert.deepEqual(JSON.parse(await readFile(join(storageRoot, 'run-1.json'), 'utf8')), {
-    schemaVersion: 1,
-    run: validRun
-  })
+  const invalidRuns = [
+    createRun({ prompt: '' }),
+    createRun({ error: publicLookingError }),
+    createRun({
+      events: createRun().events.map((event, index) =>
+        index === 0 ? { ...event, payload: [] } : event
+      )
+    })
+  ]
+
+  for (const invalidRun of invalidRuns) {
+    assert.deepEqual(await repository.save(invalidRun), {
+      ok: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Run snapshot failed validation',
+        retryable: false
+      }
+    })
+    assert.deepEqual(await readFile(snapshotPath), originalBytes)
+  }
+
+  assert.deepEqual(await repository.get('run-1'), { ok: true, data: validRun })
 })
 
 test('preserves a repository-managed snapshot when replacement fails', async (t) => {

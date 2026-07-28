@@ -121,6 +121,27 @@
 
 **验证方式与通过标准：** 类型和运行时测试精确覆盖用户给出的 Public Contracts；非法旧事件名、旧错误码、缺少 `retryable`、`value` 成功分支和缺少检查点的快照均被拒绝；Repository 既有耐久性用例无回归，全部质量门禁退出码为 0。
 
+### Task 2 Fix Round 2 Review Fix：收紧 Agent 契约守卫
+
+**修改目标：** 处理 Task 2 Fix Round 2 审查发现的运行时守卫绕过问题：拒绝伪装为公共错误的原生/异类对象，确保错误转换面对 hostile getter 或 Proxy 时只返回安全的新对象；限制事件 payload 与嵌套 JSON 值为普通 JSON 对象；补齐 Run 序列和事件归属的直接回归覆盖。
+
+**修改范围与明确不包含的内容：** 仅修改 `errors.ts`、`validation.ts`、现有 Agent/Repository 行为测试及其同目录 README；保留已批准公共类型、状态机、schemaVersion 1 envelope、原子临时写入/重命名与安全加载诊断。不实现 Executor、Orchestrator、Electron IPC 或 UI。
+
+**涉及的文件：**
+- Modify: `src/agent/errors.ts`, `src/agent/validation.ts`
+- Modify: `tests/agent-state-machine.test.mjs`, `tests/agent-repository.test.mjs`
+- Modify: `src/agent/README.md`, `tests/README.md`
+- Modify: this implementation plan, `docs/2026-07-28/README.md`, `.superpowers/sdd/Harness Agent离线闭环实现计划/task-2-fix-round-2-report.md`
+
+**实施步骤：**
+- [x] 先为原生 Error、非枚举/符号额外键、hostile getter/Proxy、非普通 payload、Run 序列/归属和无替换快照拒绝写入失败测试，并记录 RED。
+- [x] 将 Agent 错误和 JSON 对象守卫收紧为普通数据对象与完整自有键集合；确保 `toAgentError` 不传播 getter/Proxy 异常。
+- [x] 迁移事件/Run 校验与 Repository 回归用例，保持无效输入不会覆盖既有快照。
+- [x] 更新受影响 README 和报告，运行聚焦/全量测试、README 契约、类型检查及 `git diff --check`。
+- [x] 以独立本地提交保存为 `fix: harden agent contract guards`，不推送。
+
+**验证方式与通过标准：** 原生 Error、数组、Date、非普通对象、带任何额外字符串或符号键的错误对象及 hostile getter/Proxy 都不能通过公共守卫或破坏错误转换；事件 payload 仅接受 JSON 对象树；Run 拒绝首序号非 1、缺口、重复/乱序和 runId 不匹配；Repository 对无效快照拒绝保存且不替换有效文件；所有质量门禁以退出码 0 完成。
+
 ### Task 3: JSON Run Repository 与恢复检查点
 
 **Files:**
@@ -274,3 +295,10 @@
 - 实际实现：公共类型现限定六种错误码和 `retryable`，事件统一为五个公共字段及十二种命名；`AgentRun` 以 `{ analysis, final }` 输出和 `{ phase, nextChunkIndex }` 检查点持久化；`AgentResult<T>` 成功分支改为 `data`。运行时守卫拒绝旧事件、旧错误码、缺失 `retryable`、`value` 分支、缺失或无效输出/检查点；状态机与 JSON Repository 已迁移。Repository 保持 schemaVersion 1 envelope、临时写入/重命名、替换失败保护及原有安全诊断，公开失败分别映射为 `VALIDATION_ERROR` 或 `PERSISTENCE_FAILED`。
 - 复审修正：规格/质量复审发现 `AgentRun` 守卫仍可接受遗留 `result` 额外字段，且替换用例仍在构造该字段。新增断言后，聚焦测试按预期以 `true !== false` 失败；守卫现仅接受批准的 Run 字段（及可选 `error`），替换用例改为 `output.final`，同一聚焦命令随后通过 17/17。当前环境没有可派发的独立审查代理，因此此项为本地逐项规格与差异复审。
 - 验证：最终 `node --experimental-strip-types --test tests/agent-state-machine.test.mjs tests/agent-repository.test.mjs` 通过 17/17；`npm.cmd run check:readmes` 通过；`npm.cmd test` 通过 33/33；`npm.cmd run typecheck` 的 Node 与 Web 检查均通过；`git diff --check` 未报告空白错误。
+
+### Task 2 Fix Round 2 Review Fix：收紧 Agent 契约守卫
+
+- RED：在不改生产代码前新增原生 Error 伪装、枚举/非枚举/符号额外键、hostile getter/Proxy、数组/Date/异类 payload、Run 序列/归属及 Repository 保留快照用例。`node --experimental-strip-types --test tests/agent-state-machine.test.mjs tests/agent-repository.test.mjs` 以退出码 1 结束：Repository 将伪装 Error 或数组 payload 保存为成功；`isAgentError` 接受原生 Error；`toAgentError` 传播 getter 异常；`isAgentEvent` 接受非普通 payload。
+- 实际实现：`isAgentError` 要求普通数据对象且用 `Reflect.ownKeys` 精确比较三个字符串键，拒绝 Error、数组、异类对象、非枚举/符号/枚举额外键。`toAgentError` 在所有反射和属性读取外提供安全回退，因此 hostile getter/Proxy 只得到新的标准 `EXECUTION_FAILED` 错误。事件 payload 与嵌套对象使用普通 JSON 对象守卫；Run 序列、重复/乱序与事件 `runId` 归属的直接回归测试已覆盖。真实 Repository 用例确认伪装 Error 和数组 payload 都在写入前被拒绝，且现有快照字节不变。
+- GREEN：同一聚焦命令通过 21/21。
+- 验证：`npm.cmd test` 通过 37/37；`npm.cmd run check:readmes` 通过；`npm.cmd run typecheck` 的 Node 与 Web 检查均通过；`git diff --check` 未报告空白错误。

@@ -133,6 +133,61 @@ test('normalizes a valid-coded Error without retaining stack or extra fields', (
   assert.equal('extra' in normalized, false)
 })
 
+test('rejects native errors and every extra own key from the public error shape', () => {
+  const publicError = {
+    code: 'EXECUTION_FAILED',
+    message: 'Executor stopped',
+    retryable: true
+  }
+  const nativeError = Object.assign(new Error('Executor stopped'), {
+    code: 'EXECUTION_FAILED',
+    retryable: true,
+    extra: 'enumerable camouflage'
+  })
+  const nonEnumerableExtra = Object.defineProperty({ ...publicError }, 'extra', {
+    value: 'hidden camouflage',
+    enumerable: false
+  })
+  const symbolExtra = { ...publicError, [Symbol('extra')]: 'symbol camouflage' }
+
+  assert.equal(isAgentError(publicError), true)
+  assert.equal(isAgentError(nativeError), false)
+  assert.equal(isAgentError({ ...publicError, extra: 'extra field' }), false)
+  assert.equal(isAgentError(nonEnumerableExtra), false)
+  assert.equal(isAgentError(symbolExtra), false)
+})
+
+test('returns a fresh fallback error when getters or proxies throw during conversion', () => {
+  const throwingGetter = Object.defineProperty({}, 'code', {
+    enumerable: true,
+    get: () => {
+      throw new Error('getter should not escape')
+    }
+  })
+  const throwingProxy = new Proxy(
+    {},
+    {
+      ownKeys: () => {
+        throw new Error('proxy should not escape')
+      }
+    }
+  )
+
+  for (const unsafeError of [throwingGetter, throwingProxy]) {
+    let normalized
+    assert.doesNotThrow(() => {
+      normalized = toAgentError(unsafeError)
+    })
+    assert.deepEqual(normalized, {
+      code: 'EXECUTION_FAILED',
+      message: 'Unexpected agent error',
+      retryable: true
+    })
+    assert.notEqual(normalized, unsafeError)
+    assert.deepEqual(Reflect.ownKeys(normalized), ['code', 'message', 'retryable'])
+  }
+})
+
 test('rejects duplicate approval after a run has resumed', () => {
   const approved = transition(createRun('awaiting_approval'), 'running')
   const duplicateApproval = transitionRun(approved, 'running', '2026-07-28T09:02:00.000Z')
@@ -178,6 +233,14 @@ test('accepts a non-blank prompt and rejects malformed prompt input', () => {
   assert.equal(isAgentRun({ ...createRun(), prompt: '   ' }), false)
 })
 
+test('rejects non-plain or non-JSON event payloads', () => {
+  const event = createRun().events[0]
+
+  for (const payload of [[], new Date(createdAt), Object.create({ inherited: true }), { createdAt: new Date(createdAt) }]) {
+    assert.equal(isAgentEvent({ ...event, payload }), false)
+  }
+})
+
 test('requires the approved error shape, data result branch, output, and checkpoint', () => {
   assert.equal(
     isAgentError({
@@ -213,4 +276,20 @@ test('requires the approved error shape, data result branch, output, and checkpo
     }),
     false
   )
+})
+
+test('rejects non-contiguous and foreign event sequences in a run', () => {
+  const event = createRun().events[0]
+  const events = (sequences, runIds = sequences.map(() => 'run-1')) =>
+    sequences.map((sequence, index) => ({
+      ...event,
+      sequence,
+      runId: runIds[index]
+    }))
+
+  assert.equal(isAgentRun({ ...createRun(), events: events([2]) }), false)
+  assert.equal(isAgentRun({ ...createRun(), events: events([1, 3]) }), false)
+  assert.equal(isAgentRun({ ...createRun(), events: events([1, 1]) }), false)
+  assert.equal(isAgentRun({ ...createRun(), events: events([1, 3, 2]) }), false)
+  assert.equal(isAgentRun({ ...createRun(), events: events([1, 2], ['run-1', 'other-run']) }), false)
 })

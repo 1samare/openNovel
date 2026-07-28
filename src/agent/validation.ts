@@ -21,6 +21,19 @@ const runStatuses: string[] = [
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
 
+const isPlainJsonObject = (value: unknown): value is Record<string, unknown> => {
+  try {
+    if (!isRecord(value) || Array.isArray(value)) {
+      return false
+    }
+
+    const prototype = Object.getPrototypeOf(value)
+    return prototype === Object.prototype || prototype === null
+  } catch {
+    return false
+  }
+}
+
 const hasOnlyKeys = (value: Record<string, unknown>, keys: string[]): boolean =>
   Object.keys(value).length === keys.length &&
   keys.every((key) => Object.hasOwn(value, key))
@@ -44,23 +57,27 @@ const isAgentEventType = (value: unknown): value is AgentEventType =>
   typeof value === 'string' && agentEventTypes.includes(value)
 
 const isJsonValue = (value: unknown): value is JsonValue => {
-  if (value === null || typeof value === 'boolean' || typeof value === 'string') {
-    return true
-  }
+  try {
+    if (value === null || typeof value === 'boolean' || typeof value === 'string') {
+      return true
+    }
 
-  if (typeof value === 'number') {
-    return Number.isFinite(value)
-  }
+    if (typeof value === 'number') {
+      return Number.isFinite(value)
+    }
 
-  if (Array.isArray(value)) {
-    return value.every(isJsonValue)
-  }
+    if (Array.isArray(value)) {
+      return value.every(isJsonValue)
+    }
 
-  return isRecord(value) && Object.values(value).every(isJsonValue)
+    return isPlainJsonObject(value) && Object.values(value).every(isJsonValue)
+  } catch {
+    return false
+  }
 }
 
 const isEventPayload = (value: unknown): value is Record<string, JsonValue> =>
-  isRecord(value) && Object.values(value).every(isJsonValue)
+  isPlainJsonObject(value) && Object.values(value).every(isJsonValue)
 
 export const isRunStatus = (value: unknown): value is RunStatus =>
   typeof value === 'string' && runStatuses.includes(value)
