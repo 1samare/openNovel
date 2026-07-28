@@ -206,6 +206,21 @@ const snapshot = (overrides = {}) => ({
   ...overrides
 })
 
+const legacyFinalSnapshot = (overrides = {}) => snapshot({
+  id: 'legacy-run',
+  status: 'running',
+  events: [
+    { runId: 'legacy-run', sequence: 1, type: 'run.created', timestamp: times[0], payload: {} },
+    { runId: 'legacy-run', sequence: 2, type: 'run.started', timestamp: times[1], payload: {} },
+    { runId: 'legacy-run', sequence: 3, type: 'step.started', timestamp: times[2], payload: { phase: 'analysis' } },
+    { runId: 'legacy-run', sequence: 4, type: 'step.delta', timestamp: times[3], payload: { phase: 'analysis', text: 'analysis-1' } },
+    { runId: 'legacy-run', sequence: 5, type: 'step.completed', timestamp: times[4], payload: { phase: 'analysis' } }
+  ],
+  output: { analysis: 'analysis-1', final: '' },
+  checkpoint: { phase: 'final', nextChunkIndex: 0 },
+  ...overrides
+})
+
 test('cancels active work before serially committing the cancellation', async () => {
   const repository = new MemoryRepository()
   const orchestrator = createOrchestrator(repository, new BlockingExecutor())
@@ -219,7 +234,9 @@ test('cancels active work before serially committing the cancellation', async ()
 
   assert.equal(cancelled.ok, true)
   assert.equal(cancelled.data.status, 'cancelled')
-  assert.equal(cancelled.data.events.at(-1).type, 'run.cancelled')
+  assert.deepEqual(cancelled.data.events.at(-1), {
+    runId: 'run-1', sequence: 5, type: 'run.cancelled', timestamp: times[4], payload: {}
+  })
   assert.equal(cancelled.data.output.analysis, 'analysis-first')
 })
 
@@ -235,7 +252,10 @@ test('maps executor failures and unknown ids to exact public errors', async () =
   assert.deepEqual(failed.error, {
     code: 'EXECUTION_FAILED', message: 'Mock executor failed', retryable: true
   })
-  assert.equal(failed.events.at(-1).type, 'run.failed')
+  assert.deepEqual(failed.events.at(-1), {
+    runId: 'run-1', sequence: 4, type: 'run.failed', timestamp: times[3],
+    payload: { code: 'EXECUTION_FAILED' }
+  })
   assert.deepEqual(await orchestrator.getRun('missing'), {
     ok: false,
     error: { code: 'RUN_NOT_FOUND', message: 'Run was not found', retryable: false }
@@ -298,7 +318,9 @@ test('recovers persisted running work as interrupted and resumes from its checkp
   const recovered = await restarted.recoverInterruptedRuns()
   assert.equal(recovered.ok, true)
   assert.equal(recovered.data.runs[0].status, 'interrupted')
-  assert.equal(recovered.data.runs[0].events.at(-1).type, 'run.interrupted')
+  assert.deepEqual(recovered.data.runs[0].events.at(-1), {
+    runId: 'run-1', sequence: 5, type: 'run.interrupted', timestamp: times[0], payload: {}
+  })
 
   assert.equal((await restarted.resumeRun(created.data.id)).ok, true)
   const paused = await eventually(async () => {
@@ -307,6 +329,9 @@ test('recovers persisted running work as interrupted and resumes from its checkp
   })
   assert.equal(paused.output.analysis, 'analysis-firstanalysis-2')
   assert.equal(paused.output.analysis.includes('analysis-1'), false)
+  assert.deepEqual(paused.events.find((event) => event.type === 'run.resumed'), {
+    runId: 'run-1', sequence: 6, type: 'run.resumed', timestamp: times[1], payload: {}
+  })
 })
 
 test('keeps the analysis checkpoint until approval.requested persists, then recovers without final bypass', async () => {
@@ -486,4 +511,116 @@ test('rejects duplicate approval and cancellation and does not append a late chu
   const cancelled = await cancellationOrchestrator.getRun(cancellationRun.data.id)
   assert.equal(cancelled.data.output.analysis, 'analysis-first')
   assert.equal(cancelled.data.output.analysis.includes('analysis-late'), false)
+})
+
+test('repairs a legacy final checkpoint without approval proof before it can stream final output', async () => {
+  const repository = new MemoryRepository()
+  repository.listResult = { runs: [legacyFinalSnapshot()], issues: [] }
+  const orchestrator = createOrchestrator(
+    repository,
+    new SequenceExecutor({ analysis: ['analysis-1'], final: ['final-1'] })
+  )
+
+  const recovered = await orchestrator.recoverInterruptedRuns()
+  assert.equal(recovered.ok, true)
+  assert.deepEqual(recovered.data.runs[0].checkpoint, { phase: 'analysis', nextChunkIndex: 1 })
+  assert.deepEqual(recovered.data.runs[0].events.at(-1), {
+    runId: 'legacy-run', sequence: 6, type: 'run.interrupted', timestamp: times[0], payload: {}
+  })
+
+  assert.equal((await orchestrator.resumeRun('legacy-run')).ok, true)
+  const awaitingApproval = await eventually(async () => {
+    const run = await orchestrator.getRun('legacy-run')
+    return run.ok && run.data.status === 'awaiting_approval' ? run.data : undefined
+  })
+  assert.equal(awaitingApproval.output.analysis, 'analysis-1')
+  assert.equal(awaitingApproval.output.final, '')
+  assert.equal(awaitingApproval.events.filter((event) => event.type === 'step.delta').length, 1)
+  assert.equal(awaitingApproval.events.some((event) => event.type === 'run.completed'), false)
+
+  const approved = await orchestrator.approveRun('legacy-run')
+  assert.equal(approved.ok, true)
+  assert.deepEqual(approved.data.events.at(-1), {
+    runId: 'legacy-run', sequence: 11, type: 'approval.resolved', timestamp: times[5], payload: {}
+  })
+  const completed = await eventually(async () => {
+    const run = await orchestrator.getRun('legacy-run')
+    return run.ok && run.data.status === 'completed' ? run.data : undefined
+  })
+  assert.equal(completed.output.final, 'final-1')
+  assert.deepEqual(completed.events.at(-1), {
+    runId: 'legacy-run', sequence: 15, type: 'run.completed', timestamp: times[9], payload: {}
+  })
+})
+
+test('refuses an interrupted final checkpoint without a durable approval proof', async () => {
+  const repository = new MemoryRepository()
+  repository.runs.set('legacy-run', legacyFinalSnapshot({ status: 'interrupted' }))
+  const orchestrator = createOrchestrator(repository, new SequenceExecutor({ analysis: [], final: ['must-not-run'] }))
+
+  assert.deepEqual(await orchestrator.resumeRun('legacy-run'), {
+    ok: false,
+    error: {
+      code: 'INVALID_STATE',
+      message: 'Cannot execute final phase before approval is resolved',
+      retryable: false
+    }
+  })
+  assert.equal((await orchestrator.getRun('legacy-run')).data.output.final, '')
+})
+
+test('mock executor delays active analysis and final streams and stops when aborted during delay', async () => {
+  const delaySignals = []
+  let releaseDelay
+  const executor = new MockExecutor({
+    analysisChunks: ['analysis-1', 'analysis-2'],
+    finalChunks: ['final-1', 'final-2'],
+    delay: async (signal) => {
+      delaySignals.push(signal)
+      await new Promise((resolve) => {
+        releaseDelay = resolve
+        signal.addEventListener('abort', resolve, { once: true })
+      })
+    }
+  })
+  const analysisController = new AbortController()
+  const analysisIterator = executor.stream({
+    prompt: 'Prompt.', phase: 'analysis', nextChunkIndex: 1, signal: analysisController.signal
+  })[Symbol.asyncIterator]()
+  const firstAnalysis = analysisIterator.next()
+  await eventually(async () => releaseDelay)
+  releaseDelay()
+  assert.deepEqual(await firstAnalysis, { value: 'analysis-2', done: false })
+
+  const finalController = new AbortController()
+  const finalIterator = executor.stream({
+    prompt: 'Prompt.', phase: 'final', nextChunkIndex: 0, signal: finalController.signal
+  })[Symbol.asyncIterator]()
+  const firstFinal = finalIterator.next()
+  await eventually(async () => releaseDelay)
+  finalController.abort()
+  assert.deepEqual(await firstFinal, { value: undefined, done: true })
+  assert.deepEqual(delaySignals, [analysisController.signal, finalController.signal])
+})
+
+test('serializes genuinely concurrent duplicate approval and cancellation commands', async () => {
+  const approvalRepository = new MemoryRepository()
+  const approvalOrchestrator = createOrchestrator(approvalRepository, new ApprovalThenBlockingExecutor())
+  const approvalRun = await approvalOrchestrator.createRun('Approve concurrently.')
+  await eventually(async () => (await approvalOrchestrator.getRun(approvalRun.data.id)).data?.status === 'awaiting_approval')
+  const approvals = await Promise.all([
+    approvalOrchestrator.approveRun(approvalRun.data.id),
+    approvalOrchestrator.approveRun(approvalRun.data.id)
+  ])
+  assert.deepEqual(approvals.map((result) => result.ok), [true, false])
+
+  const cancellationRepository = new MemoryRepository()
+  const cancellationOrchestrator = createOrchestrator(cancellationRepository, new BlockingExecutor())
+  const cancellationRun = await cancellationOrchestrator.createRun('Cancel concurrently.')
+  await eventually(async () => (await cancellationOrchestrator.getRun(cancellationRun.data.id)).data?.events.some((event) => event.type === 'step.delta'))
+  const cancellations = await Promise.all([
+    cancellationOrchestrator.cancelRun(cancellationRun.data.id),
+    cancellationOrchestrator.cancelRun(cancellationRun.data.id)
+  ])
+  assert.deepEqual(cancellations.map((result) => result.ok), [true, false])
 })

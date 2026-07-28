@@ -225,6 +225,8 @@
 2. 将 analysis `step.completed` 的检查点保留在 analysis，直到 `awaiting_approval` 与 `approval.requested` 同一持久化快照成功提交；恢复从 analysis 末尾重新请求审批而不进入 final。
 3. 为每个订阅者提供独立事件快照，隔离其异常和变异；补充公开 `RunListResult`，让读取/命令/恢复传播仓储错误并保留 issues。
 4. 以最小改动补齐 Mock Executor、排队快照、重复命令和取消竞态的行为保护，同步所有受影响目录 README 与任务报告。
+5. 为遗留 schema-v1 的 final checkpoint 增加持久化 approval.resolved 证明：恢复时安全修正缺少证明的 interrupted 快照为 analysis 末尾，且最终阶段在运行前作防御性证明校验。
+6. 以种子遗留快照、延迟中止的 Mock Executor、完整事件公共字段及真正并发的重复命令用例确认回归，再回填复审结果。
 
 **验证方式与通过标准：** 聚焦测试先以现有实现的行为差异失败；实现后聚焦用例覆盖所有审查项并通过。随后 `npm.cmd test`、`npm.cmd run check:readmes`、`npm.cmd run typecheck` 和 `git diff --check` 均成功，且提交仅包含本轮 Task 4 文件。
 
@@ -363,3 +365,8 @@
 - 实际实现：analysis `step.completed` 现在保留 analysis 检查点，只有 `awaiting_approval`、`approval.requested` 和 final 检查点在同一快照成功持久化后才公开；恢复从 analysis 末尾重新请求审批，final 只能在 approval.resolved 后执行。每位订阅者收到独立 `structuredClone` 快照，监听器异常被隔离；`RunLoadIssue` 与 `RunListResult` 提升为共享公共契约，`listRuns`/`recoverInterruptedRuns` 返回 `{ runs, issues }`，读取和命令方法原样传播仓储 AgentResult 错误。补齐 Mock Executor、排队快照、重复审批/取消和延迟 chunk 取消的行为用例。
 - GREEN：聚焦编排器套件通过 12/12；覆盖审批失败后重启、监听器变异/异常/退订、损坏与读取失败传播、issues 保留、非 running 恢复、确定性 Mock 流、队列先持久化及取消竞态。
 - 验证：`npm.cmd test` 通过 50/50；`npm.cmd run check:readmes` 通过；`npm.cmd run typecheck` 的 Node 与 Web 检查均通过；`git diff --check` 未报告空白错误（仅有 Git 的 LF/CRLF 转换提示）。
+- 复审追加计划：处理遗留 schema-v1 的 running/final checkpoint 在未持久化 approval.resolved 时可被恢复后直接执行 final 的缺口。先用种子快照复现，修复时从 analysis delta 事件导出检查点并持久化修正；同时补强进行中延迟的 Mock 中止、关键生命周期事件公共字段和并发重复命令测试。
+- 复审追加 RED：`node --experimental-strip-types --test tests/agent-orchestrator.test.mjs` 以退出码 1 结束。种子 legacy snapshot 恢复后仍为 `{ phase: 'final', nextChunkIndex: 0 }`，直接复现缺失 approval.resolved 证明时的 final 绕过；测试同时补齐进行中延迟中止、关键事件的 runId/sequence/payload 与真实并发重复命令覆盖。
+- 复审追加实际实现：编排器从最后一条 approval.requested 后查找 approval.resolved；恢复 running snapshot 时，在添加 run.interrupted 的同一持久化 mutation 中将缺少证明的 final checkpoint 修正为 analysis delta 数量导出的 analysis checkpoint。`resumeRun` 与 `streamPhase` 都拒绝无证明的 final，形成恢复与执行入口两层防线；显式 approval.resolved 仍照常授权 final。
+- 复审追加 GREEN：聚焦编排器套件通过 16/16，包括 seeded legacy repair 后重新等待审批、直接 final 防线、进行中 delay 中止和并发重复命令。
+- 复审追加验证：`npm.cmd test` 通过 54/54；`npm.cmd run check:readmes` 通过；`npm.cmd run typecheck` 的 Node 与 Web 检查均通过；`git diff --check` 未报告空白错误（仅有 Git 的 LF/CRLF 转换提示）。

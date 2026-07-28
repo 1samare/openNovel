@@ -12,7 +12,7 @@
 - `repository.ts`：注入存储根目录的 JSON Run 仓储，严格接受仅含 `schemaVersion` 与 `run` 的 schemaVersion 1 envelope，使用同目录临时文件重命名和无绝对路径的加载诊断；公开失败映射为验证或持久化错误，并以共享 `{ runs, issues }` 形态返回列表诊断。
 - `executor.ts`：定义带 Prompt、阶段、检查点索引和 `AbortSignal` 的流式执行器边界。
 - `mock-executor.ts`：提供可注入延迟和确定性分析/最终文本块的离线执行器。
-- `orchestrator.ts`：按单 Run 串行队列编排创建、流式步骤、审批、取消、失败、事件回补和重启恢复；审批 checkpoint 仅在 approval.requested 同一持久化提交后进入 final，每次事件变更均在持久化成功后才更新内存并以隔离快照通知订阅者。
+- `orchestrator.ts`：按单 Run 串行队列编排创建、流式步骤、审批、取消、失败、事件回补和重启恢复；final 流必须由对应 approval.requested 之后的持久化 approval.resolved 证明授权，恢复会在同一 interrupted 快照中修正缺少证明的 legacy final checkpoint，审批 checkpoint 仅在 approval.requested 同一持久化提交后进入 final。
 
 ## 依赖边界
 
@@ -35,3 +35,4 @@
 - 2026-07-28：要求 Agent 错误的全部必填字段为可枚举数据属性，避免守卫接受无法 JSON 往返的非枚举或 accessor 值。
 - 2026-07-28：新增 Mock Executor 与 Agent Orchestrator，以串行持久化事件驱动审批、取消、失败与恢复闭环。
 - 2026-07-28：收紧审批/恢复原子边界，隔离订阅者异常与变异，并保留仓储读取错误和 Run 列表诊断。
+- 2026-07-28：为 legacy schema-v1 final checkpoint 增加持久化审批证明与恢复修正，并在 final 流入口执行防御性授权检查。

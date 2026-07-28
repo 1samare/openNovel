@@ -12,7 +12,7 @@
 - `readme-contract.test.mjs`：验证 README 目录契约检查器的祖先目录、精确必需章节、本地 Git 变更、基准分支和 push 干净检出行为。
 - `agent-state-machine.test.mjs`：验证 Agent Run 的生命周期、取消、失败、安全错误规范化、十二种公共事件、普通且可序列化的错误/JSON payload 守卫、严格错误/结果形态、输出/检查点、序列/归属、重复审批、终态保护和 Prompt 校验。
 - `agent-repository.test.mjs`：使用真实临时目录验证迁移后公共契约下的 JSON Run 快照原子保存、重载、事件筛选、严格 envelope 诊断，以及不可序列化错误、非 JSON payload 和不连贯事件等无效输入不会替换有效快照。
-- `agent-orchestrator.test.mjs`：使用内存仓储和可控离线执行器验证严格事件序列、审批持久化/恢复原子边界、监听器快照隔离、仓储错误与列表诊断传播、Mock Executor、取消竞态、事件回补及恢复检查点去重。
+- `agent-orchestrator.test.mjs`：使用内存仓储和可控离线执行器验证严格事件序列、审批持久化/恢复原子边界、legacy final checkpoint 审批证明修正、监听器快照隔离、仓储错误与列表诊断传播、Mock Executor 的进行中中止、取消竞态、事件回补及恢复检查点去重。
 
 ## 依赖边界
 
@@ -35,3 +35,4 @@
 - 2026-07-28：补充非枚举/状态型 accessor 错误字段和 Repository 无替换保护的审查回归测试。
 - 2026-07-28：新增 Mock Executor 与 Orchestrator 的离线闭环行为测试。
 - 2026-07-28：补充 Task 4 审查修复的审批绕过、监听器隔离、仓储结果和执行器/命令路径回归测试。
+- 2026-07-28：补充 legacy final checkpoint、持久化 approval.resolved 证明、进行中延迟中止和真正并发重复命令的复审回归测试。

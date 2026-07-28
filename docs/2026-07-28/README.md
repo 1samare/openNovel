@@ -41,3 +41,5 @@
 - 2026-07-28：回填 Task 4 的 Mock Executor、串行 Agent Orchestrator 与离线闭环验证记录。
 - 2026-07-28：登记 Task 4 Fix Round 1 的审批恢复边界、观察隔离与仓储结果契约修复计划。
 - 2026-07-28：回填 Task 4 Fix Round 1 的 RED/GREEN、共享 Run 列表契约与全量验证结果。
+- 2026-07-28：登记 Task 4 Fix Round 1 复审追加的遗留审批证明修复与测试加固计划。
+- 2026-07-28：回填 Task 4 Fix Round 1 复审追加的 legacy 审批证明修复与 54 项全量验证结果。

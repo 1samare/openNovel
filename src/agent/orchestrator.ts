@@ -53,6 +53,23 @@ const eventFor = (
   payload
 })
 
+const hasApprovalProof = (run: AgentRun): boolean => {
+  let lastRequested = -1
+  for (let index = 0; index < run.events.length; index += 1) {
+    if (run.events[index].type === 'approval.requested') {
+      lastRequested = index
+    }
+  }
+  return lastRequested >= 0 && run.events
+    .slice(lastRequested + 1)
+    .some((event) => event.type === 'approval.resolved')
+}
+
+const analysisChunkCount = (run: AgentRun): number =>
+  run.events.filter(
+    (event) => event.type === 'step.delta' && event.payload.phase === 'analysis'
+  ).length
+
 export class AgentOrchestrator {
   private readonly repository: RunRepository
   private readonly executor: AgentExecutor
@@ -169,6 +186,16 @@ export class AgentOrchestrator {
     if (run.status !== 'interrupted') {
       return statusError(run.status, 'running')
     }
+    if (run.checkpoint.phase === 'final' && !hasApprovalProof(run)) {
+      return {
+        ok: false,
+        error: {
+          code: 'INVALID_STATE',
+          message: 'Cannot execute final phase before approval is resolved',
+          retryable: false
+        }
+      }
+    }
     return this.beginPhase(id, run.checkpoint.phase, 'run.resumed')
   }
 
@@ -184,7 +211,7 @@ export class AgentOrchestrator {
         recovered.push(run)
         continue
       }
-      const interrupted = await this.transitionEvent(run.id, 'interrupted', 'run.interrupted', {})
+      const interrupted = await this.interruptForRecovery(run.id)
       if (!interrupted.ok) {
         return interrupted
       }
@@ -216,6 +243,16 @@ export class AgentOrchestrator {
     const signal = controller.signal
 
     try {
+      const initial = await this.loadRun(id)
+      if (
+        !initial.ok ||
+        initial.data === undefined ||
+        initial.data.status !== 'running' ||
+        (phase === 'final' && !hasApprovalProof(initial.data))
+      ) {
+        return
+      }
+
       const started = await this.appendEvent(id, 'step.started', { phase })
       if (!started.ok || signal.aborted) {
         return
@@ -226,6 +263,9 @@ export class AgentOrchestrator {
         return
       }
       const run = loaded.data
+      if (phase === 'final' && !hasApprovalProof(run)) {
+        return
+      }
 
       for await (const text of this.executor.stream({
         prompt: run.prompt,
@@ -349,6 +389,27 @@ export class AgentOrchestrator {
           ...transitioned.data,
           events: [...run.events, eventFor(run, 'approval.requested', timestamp, {})],
           checkpoint: { phase: 'final', nextChunkIndex: 0 }
+        }
+      }
+    })
+  }
+
+  private async interruptForRecovery(id: string): Promise<AgentResult<AgentRun>> {
+    return this.mutate(id, (run) => {
+      const timestamp = this.clock()
+      const transitioned = transitionRun(run, 'interrupted', timestamp)
+      if (!transitioned.ok) {
+        return transitioned
+      }
+      const checkpoint = run.checkpoint.phase === 'final' && !hasApprovalProof(run)
+        ? { phase: 'analysis' as const, nextChunkIndex: analysisChunkCount(run) }
+        : run.checkpoint
+      return {
+        ok: true,
+        data: {
+          ...transitioned.data,
+          checkpoint,
+          events: [...run.events, eventFor(run, 'run.interrupted', timestamp, {})]
         }
       }
     })
