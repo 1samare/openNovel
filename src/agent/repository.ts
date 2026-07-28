@@ -12,6 +12,8 @@ type RunSnapshot = {
   run: AgentRun
 }
 
+type ReplaceSnapshot = (temporaryPath: string, snapshotPath: string) => Promise<void>
+
 export type RunLoadIssue = {
   id: string
   code: 'CORRUPT_JSON' | 'UNSUPPORTED_SCHEMA' | 'INVALID_RUN' | 'READ_FAILED'
@@ -44,7 +46,16 @@ const invalidRun = (message: string): AgentResult<never> => ({
 })
 
 const parseSnapshot = (value: unknown): AgentRun => {
-  if (!isRecord(value) || value.schemaVersion !== schemaVersion) {
+  if (
+    !isRecord(value) ||
+    Object.keys(value).length !== 2 ||
+    !Object.hasOwn(value, 'schemaVersion') ||
+    !Object.hasOwn(value, 'run')
+  ) {
+    throw { code: 'INVALID_RUN' }
+  }
+
+  if (value.schemaVersion !== schemaVersion) {
     throw { code: 'UNSUPPORTED_SCHEMA' }
   }
 
@@ -76,9 +87,11 @@ const loadSnapshot = async (path: string): Promise<AgentRun> =>
 
 export class JsonRunRepository implements RunRepository {
   private readonly storageRoot: string
+  private readonly replaceSnapshot: ReplaceSnapshot
 
-  constructor(storageRoot: string) {
+  constructor(storageRoot: string, replaceSnapshot: ReplaceSnapshot = rename) {
     this.storageRoot = storageRoot
+    this.replaceSnapshot = replaceSnapshot
   }
 
   async save(run: AgentRun): Promise<AgentResult<void>> {
@@ -93,7 +106,7 @@ export class JsonRunRepository implements RunRepository {
     try {
       await mkdir(this.storageRoot, { recursive: true })
       await writeFile(temporaryPath, JSON.stringify({ schemaVersion, run } satisfies RunSnapshot), 'utf8')
-      await rename(temporaryPath, snapshotPath)
+      await this.replaceSnapshot(temporaryPath, snapshotPath)
       return { ok: true, value: undefined }
     } catch {
       await rm(temporaryPath, { force: true }).catch(() => undefined)

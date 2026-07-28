@@ -9,7 +9,7 @@
 - `errors.ts`：Agent 错误类型的运行时守卫与只保留 `code`、`message` 的新对象错误转换。
 - `validation.ts`：Prompt、Run 状态、事件和 Run 快照的运行时校验。
 - `state-machine.ts`：Run 的合法状态转换表和不可变状态转换函数。
-- `repository.ts`：注入存储根目录的 JSON Run 仓储，使用 schemaVersion 1、同目录临时文件重命名和无绝对路径的加载诊断。
+- `repository.ts`：注入存储根目录的 JSON Run 仓储，严格接受仅含 `schemaVersion` 与 `run` 的 schemaVersion 1 envelope，使用同目录临时文件重命名和无绝对路径的加载诊断；replace 操作可注入以验证失败保护。
 
 ## 依赖边界
 
@@ -26,3 +26,4 @@
 - 2026-07-28：错误转换始终返回新的公共错误对象，避免保留堆栈或扩展字段。
 - 2026-07-28：新增 JSON Run Repository，原子保存 schemaVersion 1 快照并对损坏快照返回安全诊断。
 - 2026-07-28：将 Agent 模块纳入 Node 类型检查，并收窄事件序号的运行时类型守卫。
+- 2026-07-28：拒绝带额外顶级键的 Run envelope，并通过可注入 replace 操作验证替换失败不会破坏目标快照。

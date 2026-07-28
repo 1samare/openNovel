@@ -123,6 +123,10 @@
 
 **Concern resolution before review results:** `tsconfig.node.json` now includes `src/agent/**/*.ts`, making the configured Node typecheck use the existing Node type context for repository imports. RED exposed `validation.ts(24,5): TS18046`; the event guard now verifies `typeof value.sequence === 'number'` before integer comparison. GREEN: `npm.cmd run typecheck:node`, the focused repository suite (7/7), README contract, full suite (30/30) and full typecheck all passed. The separate local commit is recorded in the Task 3 report.
 
+**Fix Round 1 plan:** Add regression coverage proving that envelopes with top-level keys other than `schemaVersion` and `run` are invalid, and that a deterministic replacement-phase failure preserves a repository-managed target byte-for-byte. Keep real temporary storage for all persistence behavior; inject only the replace operation needed to make the failure cross-platform deterministic. Update the Agent/test README files and this date directory record, then run the focused repository suite, README contract, full tests and full typecheck before a separate local commit.
+
+**Fix Round 1 results:** `parseSnapshot` now requires exactly the two envelope keys and reports all other shapes as `INVALID_RUN`. `JsonRunRepository` accepts an optional replace operation, defaulting to Node rename; tests use it only to force the replacement step to fail after a real managed snapshot and temporary file exist. RED had two focused failures (accepted extra key and successful replacement despite injected failure); GREEN passed 8/8. `npm.cmd run check:readmes` passed, `npm.cmd test` passed 31/31 and `npm.cmd run typecheck` passed. The separate local commit is recorded in the Task 3 report.
+
 ### Task 4: Mock Executor 与 Agent Orchestrator
 
 **Files:**

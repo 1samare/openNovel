@@ -131,6 +131,27 @@ test('does not expose an absolute path encoded in a corrupt snapshot filename', 
   assert.equal(JSON.stringify(listed.issues).includes('/private/agent-runs'), false)
 })
 
+test('rejects an envelope with extra top-level keys through get and list', async (t) => {
+  const storageRoot = await createStorage(t)
+  const repository = new JsonRunRepository(storageRoot)
+  await writeFile(
+    join(storageRoot, 'extra-envelope.json'),
+    JSON.stringify({ schemaVersion: 1, run: createRun(), extra: true }),
+    'utf8'
+  )
+
+  assert.deepEqual(await repository.get('extra-envelope'), {
+    ok: false,
+    error: { code: 'INVALID_RUN', message: 'Run snapshot failed validation' }
+  })
+  assert.deepEqual(await repository.list(), {
+    runs: [],
+    issues: [
+      { id: 'extra-envelope', code: 'INVALID_RUN', message: 'Run snapshot failed validation' }
+    ]
+  })
+})
+
 test('rejects an invalid run without replacing the existing snapshot', async (t) => {
   const storageRoot = await createStorage(t)
   const repository = new JsonRunRepository(storageRoot)
@@ -149,18 +170,23 @@ test('rejects an invalid run without replacing the existing snapshot', async (t)
   })
 })
 
-test('does not overwrite an existing snapshot when the storage root prevents writes', async (t) => {
+test('preserves a repository-managed snapshot when replacement fails', async (t) => {
   const storageRoot = await createStorage(t)
-  const preservedSnapshot = join(storageRoot, 'preserved.json')
-  const original = JSON.stringify({ schemaVersion: 1, run: createRun() })
-  await writeFile(preservedSnapshot, original, 'utf8')
-  const repository = new JsonRunRepository(preservedSnapshot)
+  const original = createRun()
+  const repository = new JsonRunRepository(storageRoot)
+  await repository.save(original)
+  const snapshotPath = join(storageRoot, 'run-1.json')
+  const originalBytes = await readFile(snapshotPath)
+  const replacementRepository = new JsonRunRepository(storageRoot, async () => {
+    throw new Error('replace failed')
+  })
 
-  const result = await repository.save(createRun())
+  const result = await replacementRepository.save(createRun({ prompt: 'Replacement prompt.' }))
 
   assert.deepEqual(result, {
     ok: false,
     error: { code: 'EXECUTION_FAILED', message: 'Unable to save run snapshot' }
   })
-  assert.equal(await readFile(preservedSnapshot, 'utf8'), original)
+  assert.deepEqual(await readFile(snapshotPath), originalBytes)
+  assert.deepEqual(await repository.get('run-1'), { ok: true, value: original })
 })

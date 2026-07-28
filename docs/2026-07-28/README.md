@@ -31,3 +31,6 @@
 - 2026-07-28：登记 Task 3 review 前的 Agent 类型检查覆盖与严格错误修复计划。
 - 2026-07-28：回填 Task 3 review 前的 Node 类型检查覆盖与事件守卫收窄结果。
 - 2026-07-28：回填 Task 3 review 前类型检查修复的 RED/GREEN 与全量验证结果。
+- 2026-07-28：登记 Task 3 Fix Round 1 的快照 envelope 严格校验与替换失败保护计划。
+- 2026-07-28：回填 Task 3 Fix Round 1 的严格 envelope 与替换失败保护实现结果。
+- 2026-07-28：回填 Task 3 Fix Round 1 的 RED/GREEN 与全量质量验证结果。
