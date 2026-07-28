@@ -186,13 +186,39 @@ test('rejects malformed public values without replacing the existing snapshot', 
     retryable: true,
     extra: 'camouflage'
   })
+  const nonEnumerableMessageError = Object.defineProperty(
+    {
+      code: 'INVALID_STATE',
+      retryable: false
+    },
+    'message',
+    {
+      value: 'Will disappear from JSON',
+      enumerable: false
+    }
+  )
+  const statefulMessageError = {
+    code: 'INVALID_STATE',
+    get message() {
+      return 'Accessor is not serializable'
+    },
+    retryable: false
+  }
   const invalidRuns = [
     createRun({ prompt: '' }),
     createRun({ error: publicLookingError }),
+    createRun({ error: nonEnumerableMessageError }),
+    createRun({ error: statefulMessageError }),
     createRun({
       events: createRun().events.map((event, index) =>
         index === 0 ? { ...event, payload: [] } : event
       )
+    }),
+    createRun({
+      events: [
+        createRun().events[0],
+        { ...createRun().events[1], sequence: 4, runId: 'other-run' }
+      ]
     })
   ]
 

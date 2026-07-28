@@ -6,7 +6,7 @@
 
 ## 内容说明
 
-- `errors.ts`：六种 Agent 错误码的严格运行时守卫；仅普通数据对象可通过，且必须精确拥有 `code`、`message`、`retryable` 三个字符串键、没有符号键；错误转换会隔离 getter/Proxy 异常并只返回安全的新对象。
+- `errors.ts`：六种 Agent 错误码的严格运行时守卫；仅普通数据对象可通过，且必须精确拥有三个可枚举数据描述符 `code`、`message`、`retryable`、没有符号键或 accessor；错误转换从单次安全描述符快照构造新对象。
 - `validation.ts`：Prompt、Run 状态、十二种公共事件、结果分支及含输出/检查点 Run 快照的运行时校验；payload 与嵌套对象必须为普通 JSON 对象，Run 事件序号和 `runId` 必须连续且归属一致。
 - `state-machine.ts`：Run 的合法状态转换表和不可变状态转换函数。
 - `repository.ts`：注入存储根目录的 JSON Run 仓储，严格接受仅含 `schemaVersion` 与 `run` 的 schemaVersion 1 envelope，使用同目录临时文件重命名和无绝对路径的加载诊断；公开失败映射为验证或持久化错误，replace 操作可注入以验证失败保护。
@@ -29,3 +29,4 @@
 - 2026-07-28：拒绝带额外顶级键的 Run envelope，并通过可注入 replace 操作验证替换失败不会破坏目标快照。
 - 2026-07-28：迁移至已批准的公共错误、事件、结果、分阶段输出和检查点契约，保留 JSON 快照的原子替换与恢复诊断语义。
 - 2026-07-28：收紧审查发现的错误与 JSON payload 守卫，拒绝 Error/异类对象、额外字符串或符号键和非普通 payload，并隔离 hostile getter/Proxy 的错误转换。
+- 2026-07-28：要求 Agent 错误的全部必填字段为可枚举数据属性，避免守卫接受无法 JSON 往返的非枚举或 accessor 值。

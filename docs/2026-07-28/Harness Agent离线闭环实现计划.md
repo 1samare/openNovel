@@ -142,6 +142,26 @@
 
 **验证方式与通过标准：** 原生 Error、数组、Date、非普通对象、带任何额外字符串或符号键的错误对象及 hostile getter/Proxy 都不能通过公共守卫或破坏错误转换；事件 payload 仅接受 JSON 对象树；Run 拒绝首序号非 1、缺口、重复/乱序和 runId 不匹配；Repository 对无效快照拒绝保存且不替换有效文件；所有质量门禁以退出码 0 完成。
 
+### Task 2 Fix Round 2 Review Fix 2：要求可序列化的 Agent 错误描述符
+
+**修改目标：** 处理守卫仍会接受非枚举或 accessor 形式必填错误字段的审查发现，确保通过 `isAgentError` 的错误能以 JSON 可重载形态保存；`toAgentError` 对状态型、非抛出 accessor 也始终产出新的有效三字段公共错误。
+
+**修改范围与明确不包含的内容：** 仅收紧 Agent 错误描述符守卫并补充其真实 Repository 保存保护与序列/归属表格用例；保留现有错误码、公共类型、JSON envelope、原子持久化、状态机、Executor/Orchestrator/IPC/UI 边界。
+
+**涉及的文件：**
+- Modify: `src/agent/errors.ts`
+- Modify: `tests/agent-state-machine.test.mjs`, `tests/agent-repository.test.mjs`
+- Modify: `src/agent/README.md`, `tests/README.md`
+- Modify: this implementation plan, `docs/2026-07-28/README.md`, `.superpowers/sdd/Harness Agent离线闭环实现计划/task-2-fix-round-2-report.md`
+
+**实施步骤：**
+- [x] 先为非枚举必填 `message`、状态型 accessor `message`、规范化安全输出和无替换 Repository 拒绝写入添加 RED 用例；在现有 Repository invalidRuns 表加入不连贯 sequence/runId 用例。
+- [x] 使用 `Object.getOwnPropertyDescriptors` 只接受精确的三个可枚举数据描述符，并让转换函数在单次安全描述符快照基础上生成新对象。
+- [x] 更新 README、计划/报告，运行聚焦/全量测试、README 契约、类型检查和 `git diff --check`。
+- [x] 以独立本地提交保存为 `fix: require serializable agent errors`，不推送。
+
+**验证方式与通过标准：** 非枚举必填字段和任意 accessor 均被 `isAgentError` 拒绝；规范化结果始终为只含可枚举 `code`、`message`、`retryable` 的新对象；Repository 对任何此类 Run 返回验证错误且目标快照字节和可重载结果不变；不连贯 sequence/runId 用例同样不能替换快照；全部质量门禁退出码为 0。
+
 ### Task 3: JSON Run Repository 与恢复检查点
 
 **Files:**
@@ -302,3 +322,9 @@
 - 实际实现：`isAgentError` 要求普通数据对象且用 `Reflect.ownKeys` 精确比较三个字符串键，拒绝 Error、数组、异类对象、非枚举/符号/枚举额外键。`toAgentError` 在所有反射和属性读取外提供安全回退，因此 hostile getter/Proxy 只得到新的标准 `EXECUTION_FAILED` 错误。事件 payload 与嵌套对象使用普通 JSON 对象守卫；Run 序列、重复/乱序与事件 `runId` 归属的直接回归测试已覆盖。真实 Repository 用例确认伪装 Error 和数组 payload 都在写入前被拒绝，且现有快照字节不变。
 - GREEN：同一聚焦命令通过 21/21。
 - 验证：`npm.cmd test` 通过 37/37；`npm.cmd run check:readmes` 通过；`npm.cmd run typecheck` 的 Node 与 Web 检查均通过；`git diff --check` 未报告空白错误。
+
+### Task 2 Fix Round 2 Review Fix 2：要求可序列化的 Agent 错误描述符
+
+- RED：在不改生产代码前，为非枚举 `message` 和状态型 `message` accessor 添加行为用例，并把两类错误和 sequence/runId 不连贯 Run 加入 Repository 的真实快照保留表。`node --experimental-strip-types --test tests/agent-state-machine.test.mjs tests/agent-repository.test.mjs` 以退出码 1 结束：状态型 accessor 被 `isAgentError` 接受，Repository 成功写入本应无效的 Run。
+- 实际实现：`isAgentError` 通过一次 `Object.getOwnPropertyDescriptors` 快照及完整自有键检查，只接受 `code`、`message`、`retryable` 三个可枚举数据描述符；非枚举字段和任意 accessor 都被拒绝。`toAgentError` 直接从同一描述符快照构造合格错误，或最多一次读取非合格字段的 getter，因此状态型 accessor 得到新建、有效且稳定的三字段结果。Repository 在写入前拒绝这些错误对象和不连贯 sequence/runId，原快照字节及重载结果均保持不变。
+- GREEN：同一聚焦命令通过 22/22；`npm.cmd test` 通过 38/38；`npm.cmd run check:readmes` 通过；`npm.cmd run typecheck` 的 Node 与 Web 检查均通过；`git diff --check` 未报告空白错误。

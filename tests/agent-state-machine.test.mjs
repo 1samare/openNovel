@@ -188,6 +188,42 @@ test('returns a fresh fallback error when getters or proxies throw during conver
   }
 })
 
+test('rejects non-serializable error descriptors while normalizing a stateful accessor once', () => {
+  const nonEnumerableMessage = Object.defineProperty(
+    {
+      code: 'INVALID_STATE',
+      retryable: false
+    },
+    'message',
+    {
+      value: 'Not serializable',
+      enumerable: false
+    }
+  )
+  let messageReads = 0
+  const statefulMessage = {
+    code: 'INVALID_STATE',
+    get message() {
+      messageReads += 1
+      return messageReads === 1 ? 'First readable message' : 42
+    },
+    retryable: false
+  }
+
+  assert.equal(isAgentError(nonEnumerableMessage), false)
+  assert.equal(isAgentError(statefulMessage), false)
+  assert.deepEqual(toAgentError(statefulMessage), {
+    code: 'INVALID_STATE',
+    message: 'First readable message',
+    retryable: false
+  })
+  assert.equal(messageReads, 1)
+  assert.equal(
+    isAgentError(toAgentError(nonEnumerableMessage)),
+    true
+  )
+})
+
 test('rejects duplicate approval after a run has resumed', () => {
   const approved = transition(createRun('awaiting_approval'), 'running')
   const duplicateApproval = transitionRun(approved, 'running', '2026-07-28T09:02:00.000Z')

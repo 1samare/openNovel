@@ -25,13 +25,34 @@ const isPlainDataObject = (value: unknown): value is Record<string, unknown> => 
   }
 }
 
-const hasExactOwnKeys = (value: Record<string, unknown>, keys: string[]): boolean => {
-  const ownKeys = Reflect.ownKeys(value)
-  return (
-    ownKeys.length === keys.length &&
-    ownKeys.every((key) => typeof key === 'string' && keys.includes(key))
-  )
+const agentErrorKeys = ['code', 'message', 'retryable']
+
+type OwnDescriptorSnapshot = {
+  ownKeys: PropertyKey[]
+  descriptors: Record<string, PropertyDescriptor>
 }
+
+const getOwnDescriptorSnapshot = (value: unknown): OwnDescriptorSnapshot | undefined => {
+  if (!isRecord(value)) {
+    return undefined
+  }
+
+  try {
+    return {
+      ownKeys: Reflect.ownKeys(value),
+      descriptors: Object.getOwnPropertyDescriptors(value)
+    }
+  } catch {
+    return undefined
+  }
+}
+
+const isEnumerableDataProperty = (descriptor: PropertyDescriptor | undefined): boolean =>
+  descriptor !== undefined &&
+  descriptor.enumerable === true &&
+  Object.hasOwn(descriptor, 'value') &&
+  !Object.hasOwn(descriptor, 'get') &&
+  !Object.hasOwn(descriptor, 'set')
 
 const isAgentErrorCode = (value: unknown): value is AgentErrorCode =>
   typeof value === 'string' && agentErrorCodes.includes(value)
@@ -39,19 +60,51 @@ const isAgentErrorCode = (value: unknown): value is AgentErrorCode =>
 const retryableFor = (code: AgentErrorCode): boolean =>
   code === 'PERSISTENCE_FAILED' || code === 'EXECUTION_FAILED'
 
-export const isAgentError = (value: unknown): value is AgentError => {
-  try {
-    return (
-      isPlainDataObject(value) &&
-      hasExactOwnKeys(value, ['code', 'message', 'retryable']) &&
-      isAgentErrorCode(value.code) &&
-      typeof value.message === 'string' &&
-      typeof value.retryable === 'boolean'
-    )
-  } catch {
-    return false
+const toPublicAgentError = (
+  value: unknown,
+  snapshot: OwnDescriptorSnapshot | undefined = getOwnDescriptorSnapshot(value)
+): AgentError | undefined => {
+  if (
+    !isPlainDataObject(value) ||
+    snapshot === undefined ||
+    snapshot.ownKeys.length !== agentErrorKeys.length ||
+    !snapshot.ownKeys.every((key) => typeof key === 'string' && agentErrorKeys.includes(key))
+  ) {
+    return undefined
   }
+
+  const { code, message, retryable } = snapshot.descriptors
+  if (
+    !isEnumerableDataProperty(code) ||
+    !isEnumerableDataProperty(message) ||
+    !isEnumerableDataProperty(retryable) ||
+    !isAgentErrorCode(code.value) ||
+    typeof message.value !== 'string' ||
+    typeof retryable.value !== 'boolean'
+  ) {
+    return undefined
+  }
+
+  return { code: code.value, message: message.value, retryable: retryable.value }
 }
+
+const readDescriptorValue = (
+  value: Record<string, unknown>,
+  descriptor: PropertyDescriptor | undefined
+): unknown => {
+  if (descriptor === undefined) {
+    return undefined
+  }
+
+  if (Object.hasOwn(descriptor, 'value')) {
+    return descriptor.value
+  }
+
+  return descriptor.get?.call(value)
+}
+
+export const isAgentError = (value: unknown): value is AgentError =>
+  toPublicAgentError(value) !== undefined
 
 export const toAgentError = (
   error: unknown,
@@ -64,18 +117,25 @@ export const toAgentError = (
   })
 
   try {
-    if (isAgentError(error)) {
-      return { code: error.code, message: error.message, retryable: error.retryable }
+    const snapshot = getOwnDescriptorSnapshot(error)
+    const publicError = toPublicAgentError(error, snapshot)
+    if (publicError !== undefined) {
+      return publicError
     }
 
-    const code = isRecord(error) && isAgentErrorCode(error.code) ? error.code : fallbackCode
-    const message = error instanceof Error && error.message
-      ? error.message
-      : isRecord(error) && typeof error.message === 'string'
-        ? error.message
-        : 'Unexpected agent error'
-    const retryable = isRecord(error) && typeof error.retryable === 'boolean'
-      ? error.retryable
+    const codeValue = snapshot === undefined
+      ? undefined
+      : readDescriptorValue(error as Record<string, unknown>, snapshot.descriptors.code)
+    const messageValue = snapshot === undefined
+      ? undefined
+      : readDescriptorValue(error as Record<string, unknown>, snapshot.descriptors.message)
+    const retryableValue = snapshot === undefined
+      ? undefined
+      : readDescriptorValue(error as Record<string, unknown>, snapshot.descriptors.retryable)
+    const code = isAgentErrorCode(codeValue) ? codeValue : fallbackCode
+    const message = typeof messageValue === 'string' ? messageValue : 'Unexpected agent error'
+    const retryable = typeof retryableValue === 'boolean'
+      ? retryableValue
       : retryableFor(code)
 
     return { code, message, retryable }
