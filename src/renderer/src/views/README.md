@@ -8,6 +8,7 @@
 
 - `ProjectCenterView.vue`：项目中心页面。
 - `WorkspacePlaceholderView.vue`：各一级模块的占位页面。
+- `AgentHarnessView.vue`：AI 对话的离线 Agent Run 创建、审批、时间线、错误和恢复页面。
 
 ## 依赖边界
 
@@ -20,3 +21,4 @@
 ## 变更同步
 
 - 2026-07-28：建立页面目录 README 契约。
+- 2026-07-28：新增 Harness Agent 专用工作台页面。

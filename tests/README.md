@@ -14,6 +14,7 @@
 - `agent-repository.test.mjs`：使用真实临时目录验证迁移后公共契约下的 JSON Run 快照原子保存、重载、事件筛选、严格 envelope 诊断，以及不可序列化错误、非 JSON payload 和不连贯事件等无效输入不会替换有效快照。
 - `agent-orchestrator.test.mjs`：使用内存仓储和可控离线执行器验证严格事件序列、审批持久化/恢复原子边界、legacy final checkpoint 审批证明修正、监听器快照隔离、仓储错误与列表诊断传播、Mock Executor 的分析/final chunk 选择与进行中中止、取消竞态、事件回补及恢复检查点去重。
 - `agent-ipc.test.mjs`：验证 Agent IPC 命令参数、仅 hash 可变的完整 production file URL、开发 origin/凭据/销毁 frame sender 守卫、固定且幂等的处理器/disposer、错误脱敏、Preload 事件克隆隔离、结构化日志脱敏，以及恢复/窗口附着生命周期。
+- `agent-harness.test.mjs`：行为化验证渲染层先订阅后加载、加载竞态合并、序列缺口回补/去重/刷新、命令状态门控、错误恢复与退订，并检查专用 AI 对话路由和可访问控件契约。
 
 ## 依赖边界
 
@@ -41,3 +42,4 @@
 - 2026-07-28：新增 Electron Agent IPC、最小 Preload 桥接和结构化日志的安全边界测试。
 - 2026-07-28：补充 Task 5 Fix Round 1 的 preload 工件、恢复顺序、窗口解绑、sender URL/frame 与 IPC disposer 回归测试。
 - 2026-07-28：补充 Task 5 Fix Round 1 Minor 的空 query 与空 query 加 hash production sender 回归测试。
+- 2026-07-28：新增 Harness Agent 渲染控制器和专用 AI 对话页面的行为契约测试。

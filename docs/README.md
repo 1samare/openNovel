@@ -29,3 +29,4 @@
 - 2026-07-28：回填 Task 5 Fix Round 1 的生命周期与 sender 边界验证结果。
 - 2026-07-28：登记 Task 5 Fix Round 1 Minor 的 file sender URL 规范化修复计划。
 - 2026-07-28：回填 Task 5 Fix Round 1 Minor 的 production file hash 路由验证结果。
+- 2026-07-28：回填 Task 6 的 Harness Agent 渲染闭环、事件回补与质量验证结果。

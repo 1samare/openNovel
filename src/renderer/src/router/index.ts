@@ -1,10 +1,11 @@
 import { createRouter, createWebHashHistory, type RouteRecordRaw } from 'vue-router'
 import WorkspaceLayout from '@renderer/layouts/WorkspaceLayout.vue'
 import { navigationItems } from '@renderer/navigation/items'
+import AgentHarnessView from '@renderer/views/AgentHarnessView.vue'
 import ProjectCenterView from '@renderer/views/ProjectCenterView.vue'
 import WorkspacePlaceholderView from '@renderer/views/WorkspacePlaceholderView.vue'
 
-const workspaceRoutes: RouteRecordRaw[] = navigationItems.map((item) => ({
+const workspaceRoutes: RouteRecordRaw[] = navigationItems.filter((item) => item.path !== 'chat').map((item) => ({
   path: item.path,
   name: item.path,
   component: WorkspacePlaceholderView,
@@ -27,6 +28,7 @@ const router = createRouter({
       component: WorkspaceLayout,
       children: [
         { path: '', redirect: '/workspace/overview' },
+        { path: 'chat', name: 'chat', component: AgentHarnessView },
         ...workspaceRoutes
       ]
     },

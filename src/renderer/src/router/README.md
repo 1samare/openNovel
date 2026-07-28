@@ -6,7 +6,7 @@
 
 ## 内容说明
 
-- `index.ts`：配置 Hash Router 和工作台页面路由。
+- `index.ts`：配置 Hash Router；`/workspace/chat` 专用渲染 Harness Agent 页面，其余工作台入口保持占位页。
 
 ## 依赖边界
 
@@ -19,3 +19,4 @@
 ## 变更同步
 
 - 2026-07-28：建立路由目录 README 契约。
+- 2026-07-28：将 AI 对话路由连线到 Harness Agent 专用页面。

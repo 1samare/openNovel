@@ -259,12 +259,12 @@
 - Consumes: `window.openNovel.agent` from Task 5.
 - Produces: `/workspace/chat` Harness UI with prompt, list, timeline, approval, cancellation, recovery, results and diagnostics.
 
-- [ ] Write renderer contract tests for the dedicated route, accessible controls, state-gated actions and sequence-gap backfill behavior.
-- [ ] Run focused tests and confirm expected RED failure.
-- [ ] Implement subscription-before-load, event deduplication, backfill, Run refresh and error presentation.
-- [ ] Implement responsive UI and disabled states without adding a state or UI library.
-- [ ] Run focused tests, full tests, README contract, typecheck and build.
-- [ ] Commit as `feat: add agent harness workspace`.
+- [x] Write renderer contract tests for the dedicated route, accessible controls, state-gated actions and sequence-gap backfill behavior.
+- [x] Run focused tests and confirm expected RED failure.
+- [x] Implement subscription-before-load, event deduplication, backfill, Run refresh and error presentation.
+- [x] Implement responsive UI and disabled states without adding a state or UI library.
+- [x] Run focused tests, full tests, README contract, typecheck and build.
+- [x] Commit as `feat: add agent harness workspace`.
 
 ### Task 5 Fix Round 1：加固 IPC 生命周期与 Sender 边界
 
@@ -429,3 +429,11 @@
 - RED：在修改生产守卫前，新增 `index.html?` 与 `index.html?#/workspace/chat` 回归用例并运行 `node --experimental-strip-types --test tests/agent-ipc.test.mjs`。命令以退出码 1 结束，`index.html?` 被错误放行（`true !== false`），直接证明原有分段比较丢失空查询分隔符。
 - 实际实现：production file 分支现在复制已解析 URL、只清除 `hash`，再比较完整 `href`；因此合法 `index.html#/route` 仍通过，而普通 query、空 query 与空 query 加 hash 都保留在序列化 URL 中并被拒绝。开发 origin 分支未改动。
 - GREEN 与验证：聚焦 IPC 套件通过 10/10；全量 `npm.cmd test` 通过 64/64；`npm.cmd run check:readmes`、`npm.cmd run typecheck`、`npm.cmd run build` 和 `git diff --check` 都以退出码 0 完成。未启动 GUI，未推送；本轮以 `fix: restrict file sender to hash routes` 独立本地提交。
+
+### Task 6：Harness UI 闭环
+
+- 实际实现：新增 `use-agent-harness.ts`，通过 `window.openNovel.agent` 先订阅再加载 Run 列表；以 Run/sequence 合并加载快照和直播事件，忽略旧事件和重复事件，检测缺口后依次回补 `getEvents(runId, last)`、合并并刷新 `getRun`。控制器将创建、审批、取消、恢复的命令结果直接写回状态，并在组件卸载时取消事件订阅。
+- 界面：`/workspace/chat` 专用渲染 `AgentHarnessView`，其余工作台入口仍使用占位页，AI 对话继续作为一级导航。页面提供带可见 Prompt 标签和帮助文本的创建区、Run 列表与状态、详情、按序时间线、分析/最终输出、审批卡、取消/恢复、损坏记录诊断及可重试/不可重试错误恢复；样式使用暖纸色语义令牌、键盘焦点、44px 控件、禁用/加载态、375/768/1024 响应式布局和减少动态效果支持。
+- RED：先新增 `tests/agent-harness.test.mjs`，执行 `node --experimental-strip-types --test tests/agent-harness.test.mjs` 以退出码 1 结束，明确报 `ERR_MODULE_NOT_FOUND`：缺少 `src/renderer/src/agent/use-agent-harness.ts`。该失败发生在任何 Task 6 生产模块创建之前。
+- GREEN：同一聚焦命令随后通过 5/5，行为覆盖订阅先于加载、加载期间事件合并、序列缺口回补/去重/刷新、命令状态门控与结果写回、错误恢复和取消订阅；另验证专用路由及可访问控件契约。
+- 验证：`npm.cmd test` 通过 69/69；`npm.cmd run check:readmes` 通过；`npm.cmd run typecheck` 的 Node 与 Web 检查通过；`npm.cmd run build` 的 main、preload 和 renderer 生产构建通过；`git diff --check` 未报告空白错误。未启动 GUI，未推送远端；以 `feat: add agent harness workspace` 创建独立本地提交。

@@ -7,7 +7,7 @@ export interface NavigationItem {
 
 export const navigationItems: readonly NavigationItem[] = [
   { path: 'overview', label: '项目概览', marker: '概', description: '查看小说项目的整体创作状态。' },
-  { path: 'chat', label: 'AI 对话', marker: '聊', description: '围绕当前小说项目与 AI 进行讨论。' },
+  { path: 'chat', label: 'AI 对话', marker: '聊', description: '创建离线 Agent Run，查看流式执行并进行人工审批。' },
   { path: 'world', label: '世界观', marker: '世', description: '维护世界背景、规则、地点与势力。' },
   { path: 'characters', label: '人物', marker: '人', description: '管理人物档案、关系和当前状态。' },
   { path: 'outline', label: '大纲', marker: '纲', description: '组织故事总纲、分卷与章节规划。' },
