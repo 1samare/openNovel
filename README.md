@@ -28,6 +28,8 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 
 - 2026-07-28：将 `src/agent/` 纳入 Node TypeScript 严格检查，避免 Agent 运行时代码脱离项目类型门禁。
 
+- 2026-07-28：更新 Agent 最小命名桥接及其主进程 sender 安全边界说明。
+
 ## 技术栈
 
 - Electron
@@ -88,7 +90,7 @@ docs/            按日期归档的设计和修改计划
 已经具备：
 
 - Electron 窗口和应用生命周期；
-- 隔离的渲染进程和空白预加载边界；
+- 隔离的渲染进程，以及仅暴露命名 `window.openNovel.agent` 方法的预加载边界；
 - Vue 应用、Hash Router 和公共工作台布局；
 - 项目中心及产品一级模块占位页面；
 - Agent Run 的公共契约、运行时校验和纯状态机；
@@ -104,7 +106,7 @@ docs/            按日期归档的设计和修改计划
 
 ## 安全边界
 
-渲染进程启用上下文隔离与沙箱，并关闭 Node.js 集成。预加载层当前不向页面暴露任何 Electron、Node.js 或 IPC 能力。
+渲染进程启用上下文隔离与沙箱，并关闭 Node.js 集成。预加载层不暴露通用 Electron、Node.js、IPC 或文件系统能力；它只提供固定的 `window.openNovel.agent` 命令与校验、克隆后的 Agent 事件。主进程仅接受当前顶层应用文件页或精确开发服务器 origin 的请求。
 
 ## 修改计划约定
 

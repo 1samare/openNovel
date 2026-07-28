@@ -46,3 +46,5 @@
 - 2026-07-28：登记 Task 4 Fix Round 1 剩余 Minor 的 Mock final stream 覆盖计划。
 - 2026-07-28：回填 Task 4 Fix Round 1 剩余 Minor 的活动 final Mock stream 覆盖结果。
 - 2026-07-28：回填 Task 5 的安全 Agent IPC、Preload 最小桥接、运行时恢复和脱敏日志实现记录。
+- 2026-07-28：登记 Task 5 Fix Round 1 的 preload 工件、IPC 生命周期、sender URL/frame 与注册所有权加固计划。
+- 2026-07-28：回填 Task 5 Fix Round 1 的 RED/GREEN、preload 工件检查和全量质量验证结果。

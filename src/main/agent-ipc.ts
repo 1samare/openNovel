@@ -13,6 +13,7 @@ export type AgentIpcMain = {
     channel: AgentCommandChannel,
     listener: (event: AgentIpcSenderEvent, ...args: unknown[]) => Promise<AgentResult<unknown>>
   ): void
+  removeHandler(channel: AgentCommandChannel): void
 }
 
 type AgentCommandResult = AgentResult<AgentRun | RunListResult | AgentEvent[]>
@@ -68,7 +69,12 @@ const dispatch = (runtime: AgentRuntime, command: AgentCommand): Promise<AgentCo
   }
 }
 
-export const registerAgentIpcHandlers = (ipcMain: AgentIpcMain, runtime: AgentRuntime): void => {
+const registrations = new WeakMap<AgentIpcMain, () => void>()
+
+export const registerAgentIpcHandlers = (ipcMain: AgentIpcMain, runtime: AgentRuntime): (() => void) => {
+  const existing = registrations.get(ipcMain)
+  if (existing !== undefined) return existing
+
   const channels: AgentCommandChannel[] = [
     AGENT_IPC_CHANNELS.createRun,
     AGENT_IPC_CHANNELS.getRun,
@@ -92,4 +98,14 @@ export const registerAgentIpcHandlers = (ipcMain: AgentIpcMain, runtime: AgentRu
       }
     })
   }
+
+  const dispose = (): void => {
+    if (registrations.get(ipcMain) !== dispose) return
+    for (const channel of channels) {
+      ipcMain.removeHandler(channel)
+    }
+    registrations.delete(ipcMain)
+  }
+  registrations.set(ipcMain, dispose)
+  return dispose
 }

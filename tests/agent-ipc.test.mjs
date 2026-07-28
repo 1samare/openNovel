@@ -25,15 +25,27 @@ const eventFor = (runId = 'run-1') => ({
   payload: {}
 })
 
-const senderFor = (url, { topLevel = true } = {}) => {
-  const mainFrame = { url }
+const senderFor = (url, {
+  topLevel = true,
+  senderDestroyed = false,
+  frameDestroyed = false,
+  frameThrows = false,
+  frameUrl = url
+} = {}) => {
+  const mainFrame = {
+    url: frameUrl,
+    isDestroyed: () => {
+      if (frameThrows) throw new Error('frame failed')
+      return frameDestroyed
+    }
+  }
   return {
     sender: {
       mainFrame,
       getURL: () => url,
-      isDestroyed: () => false
+      isDestroyed: () => senderDestroyed
     },
-    senderFrame: topLevel ? mainFrame : { url, parent: mainFrame }
+    senderFrame: topLevel ? mainFrame : { url: frameUrl, parent: mainFrame }
   }
 }
 
@@ -98,6 +110,48 @@ test('Agent sender allowlist accepts only the configured top-level app page or d
   )
 })
 
+test('Agent sender allowlist permits only file hash routes and rejects query, credentials, and destroyed frames', () => {
+  const production = { appPageUrl: 'file:///app/renderer/index.html' }
+  assert.equal(
+    isAllowedAgentIpcSender(senderFor('file:///app/renderer/index.html#/workspace/chat'), production),
+    true
+  )
+  assert.equal(
+    isAllowedAgentIpcSender(senderFor('file:///app/renderer/index.html?mode=debug'), production),
+    false
+  )
+  assert.equal(
+    isAllowedAgentIpcSender(senderFor('file:///app/renderer/other.html#/workspace/chat'), production),
+    false
+  )
+  assert.equal(
+    isAllowedAgentIpcSender(senderFor('http://localhost:5173/chat'), {
+      devServerOrigin: 'http://user:secret@localhost:5173'
+    }),
+    false
+  )
+  assert.equal(
+    isAllowedAgentIpcSender(senderFor('http://user:secret@localhost:5173/chat'), {
+      devServerOrigin: 'http://localhost:5173'
+    }),
+    false
+  )
+  assert.equal(
+    isAllowedAgentIpcSender(
+      senderFor('file:///app/renderer/index.html', { frameDestroyed: true }),
+      production
+    ),
+    false
+  )
+  assert.equal(
+    isAllowedAgentIpcSender(
+      senderFor('file:///app/renderer/index.html', { frameThrows: true }),
+      production
+    ),
+    false
+  )
+})
+
 test('IPC handlers register only fixed commands and serialize thrown failures without stack paths', async () => {
   const handlers = new Map()
   const runtime = {
@@ -126,6 +180,112 @@ test('IPC handlers register only fixed commands and serialize thrown failures wi
     }
   })
   assert.doesNotMatch(JSON.stringify(result), /Users|agent-runs|snapshot|stack/i)
+})
+
+test('IPC registration is idempotent and stale disposal cannot remove a newer registration', () => {
+  const handlers = new Map()
+  const removed = []
+  let registrations = 0
+  const ipcMain = {
+    handle: (channel, handler) => {
+      registrations += 1
+      handlers.set(channel, handler)
+    },
+    removeHandler: (channel) => {
+      removed.push(channel)
+      handlers.delete(channel)
+    }
+  }
+  const runtime = {
+    senderPolicy: { appPageUrl: 'file:///app/renderer/index.html' },
+    orchestrator: {}
+  }
+
+  const first = registerAgentIpcHandlers(ipcMain, runtime)
+  const repeated = registerAgentIpcHandlers(ipcMain, runtime)
+  assert.equal(registrations, 7)
+  assert.equal(first, repeated)
+
+  first()
+  assert.equal(removed.length, 7)
+  const newer = registerAgentIpcHandlers(ipcMain, runtime)
+  first()
+  assert.equal(removed.length, 7)
+  newer()
+  assert.equal(removed.length, 14)
+})
+
+test('runtime lifecycle awaits recovery before IPC registration and window creation, and handles recovery rejection', async () => {
+  const { initializeAgentRuntime } = await import('../src/main/agent-runtime.ts')
+  const calls = []
+  const runtime = {
+    recover: async () => {
+      calls.push('recover')
+      await new Promise((resolve) => setImmediate(resolve))
+      calls.push('recovered')
+    },
+    dispose: () => calls.push('runtime.dispose')
+  }
+  const dispose = await initializeAgentRuntime({
+    runtime,
+    registerIpc: () => {
+      calls.push('ipc.register')
+      return () => calls.push('ipc.dispose')
+    },
+    createWindow: () => calls.push('window.create'),
+    onRecoveryFailure: () => calls.push('recovery.failure')
+  })
+  assert.deepEqual(calls, ['recover', 'recovered', 'ipc.register', 'window.create'])
+  dispose()
+  assert.deepEqual(calls.slice(-2), ['ipc.dispose', 'runtime.dispose'])
+
+  const rejected = []
+  await initializeAgentRuntime({
+    runtime: { recover: async () => { throw new Error('storage path must stay private') }, dispose: () => undefined },
+    registerIpc: () => {
+      rejected.push('ipc.register')
+      return () => undefined
+    },
+    createWindow: () => rejected.push('window.create'),
+    onRecoveryFailure: () => rejected.push('recovery.failure')
+  })
+  assert.deepEqual(rejected, ['recovery.failure', 'ipc.register', 'window.create'])
+})
+
+test('event forwarding attaches only after an authorized load and detaches on destruction or close', async () => {
+  const { bindAgentWindowForwarding } = await import('../src/main/agent-runtime.ts')
+  const handlers = new Map()
+  const webContents = {
+    getURL: () => webContents.url,
+    isDestroyed: () => false,
+    send: () => undefined,
+    url: 'file:///app/renderer/index.html#/workspace/chat',
+    on: (event, listener) => handlers.set(`web:${event}`, listener)
+  }
+  const window = {
+    webContents,
+    once: (event, listener) => handlers.set(`window:${event}`, listener)
+  }
+  let attached = 0
+  let detached = 0
+  const runtime = {
+    senderPolicy: { appPageUrl: 'file:///app/renderer/index.html' },
+    attachWebContents: () => {
+      attached += 1
+      return () => { detached += 1 }
+    }
+  }
+  const dispose = bindAgentWindowForwarding(window, runtime)
+  assert.equal(attached, 0)
+  handlers.get('web:did-finish-load')()
+  assert.equal(attached, 1)
+  webContents.url = 'file:///app/renderer/index.html#/workspace/projects'
+  assert.equal(attached, 1)
+  handlers.get('web:destroyed')()
+  assert.equal(detached, 1)
+  dispose()
+  handlers.get('window:closed')()
+  assert.equal(detached, 1)
 })
 
 test('preload bridge exposes only named Agent methods and isolates validated event objects', async () => {
@@ -197,7 +357,7 @@ test('structured Agent logger records safe metadata without prompt, output, stac
 
 test('runtime recovers persisted Runs and forwards cloned events only to authorized live webContents', async (t) => {
   const root = await mkdtemp(join(tmpdir(), 'open-novel-agent-ipc-'))
-  t.after(() => rm(root, { recursive: true, force: true }))
+  t.after(() => rm(root, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 }))
 
   const sent = []
   const allowedWebContents = {

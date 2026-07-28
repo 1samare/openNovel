@@ -3,14 +3,19 @@ import { pathToFileURL } from 'node:url'
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { APP_NAME } from '@shared/app'
 import { registerAgentIpcHandlers } from './agent-ipc.ts'
-import { createAgentRuntime, type AgentRuntime } from './agent-runtime.ts'
+import {
+  bindAgentWindowForwarding,
+  createAgentRuntime,
+  initializeAgentRuntime,
+  type AgentRuntime
+} from './agent-runtime.ts'
 import type { AgentSenderPolicy } from './agent-ipc-security.ts'
 
 const senderPolicy = (): AgentSenderPolicy => {
   const devServerUrl = process.env.ELECTRON_RENDERER_URL
   if (devServerUrl !== undefined) {
     try {
-      return { devServerOrigin: new URL(devServerUrl).origin }
+      return { devServerOrigin: devServerUrl }
     } catch {
       return {}
     }
@@ -29,7 +34,7 @@ const createMainWindow = (runtime: AgentRuntime): BrowserWindow => {
     title: APP_NAME,
     backgroundColor: '#f6f7fb',
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.mjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true
@@ -38,7 +43,7 @@ const createMainWindow = (runtime: AgentRuntime): BrowserWindow => {
 
   mainWindow.once('ready-to-show', () => mainWindow.show())
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  runtime.attachWebContents(mainWindow.webContents)
+  bindAgentWindowForwarding(mainWindow, runtime)
   mainWindow.webContents.on(
     'did-fail-load',
     (_event, errorCode, errorDescription, validatedURL) => {
@@ -55,20 +60,29 @@ const createMainWindow = (runtime: AgentRuntime): BrowserWindow => {
   return mainWindow
 }
 
-app.whenReady().then(() => {
+let disposeAgentRuntime = (): void => undefined
+
+app.whenReady().then(async () => {
   const runtime = createAgentRuntime({
     storageRoot: join(app.getPath('userData'), 'agent-runs'),
     senderPolicy: senderPolicy()
   })
-  registerAgentIpcHandlers(ipcMain, runtime)
-  void runtime.recover()
-  createMainWindow(runtime)
+  disposeAgentRuntime = await initializeAgentRuntime({
+    runtime,
+    registerIpc: () => registerAgentIpcHandlers(ipcMain, runtime),
+    createWindow: () => { createMainWindow(runtime) },
+    onRecoveryFailure: () => console.error('Agent recovery failed')
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createMainWindow(runtime)
     }
   })
+})
+
+app.once('before-quit', () => {
+  disposeAgentRuntime()
 })
 
 app.on('window-all-closed', () => {

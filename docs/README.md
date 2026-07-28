@@ -25,3 +25,5 @@
 - 2026-07-28：回填 Harness Agent Task 2 的公共契约、运行时校验、状态机和验证结果。
 - 2026-07-28：记录 Task 2 Fix Round 1 的安全错误规范化修复与验证结果。
 - 2026-07-28：记录 Task 5 的安全 Agent IPC、Preload 最小桥接、运行时恢复和脱敏日志实现。
+- 2026-07-28：登记 Task 5 Fix Round 1 的安全桥生命周期与 sender 边界复审修复计划。
+- 2026-07-28：回填 Task 5 Fix Round 1 的生命周期与 sender 边界验证结果。

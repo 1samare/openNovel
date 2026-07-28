@@ -24,6 +24,78 @@ export type AgentRuntime = {
   dispose(): void
 }
 
+type AgentLifecycleRuntime = Pick<AgentRuntime, 'recover' | 'dispose'>
+
+export type AgentRuntimeInitialization = {
+  runtime: AgentLifecycleRuntime
+  registerIpc(): () => void
+  createWindow(): void
+  onRecoveryFailure(): void
+}
+
+export type AgentWindowWebContents = AgentLiveWebContents & {
+  on(event: 'did-finish-load' | 'destroyed', listener: () => void): unknown
+}
+
+export type AgentRuntimeWindow = {
+  webContents: AgentWindowWebContents
+  once(event: 'closed', listener: () => void): unknown
+}
+
+type AgentEventRuntime = Pick<AgentRuntime, 'senderPolicy' | 'attachWebContents'>
+
+export const initializeAgentRuntime = async ({
+  runtime,
+  registerIpc,
+  createWindow,
+  onRecoveryFailure
+}: AgentRuntimeInitialization): Promise<() => void> => {
+  try {
+    const recovered = await runtime.recover()
+    if (typeof recovered === 'object' && recovered !== null && 'ok' in recovered && recovered.ok === false) {
+      onRecoveryFailure()
+    }
+  } catch {
+    onRecoveryFailure()
+  }
+
+  const disposeIpc = registerIpc()
+  createWindow()
+  let disposed = false
+  return () => {
+    if (disposed) return
+    disposed = true
+    disposeIpc()
+    runtime.dispose()
+  }
+}
+
+export const bindAgentWindowForwarding = (
+  window: AgentRuntimeWindow,
+  runtime: AgentEventRuntime
+): (() => void) => {
+  let detach: (() => void) | undefined
+  let disposed = false
+  const dispose = (): void => {
+    if (disposed) return
+    disposed = true
+    detach?.()
+    detach = undefined
+  }
+  const attachAfterLoad = (): void => {
+    if (disposed) return
+    detach?.()
+    detach = undefined
+    if (!isAllowedLiveAgentWebContents(window.webContents, runtime.senderPolicy)) return
+    detach = runtime.attachWebContents(window.webContents)
+  }
+
+  window.webContents.on('did-finish-load', attachAfterLoad)
+  window.webContents.on('destroyed', dispose)
+  window.once('closed', dispose)
+  return dispose
+}
+
 export const createAgentRuntime = ({
   storageRoot,
   senderPolicy,
@@ -62,6 +134,7 @@ export const createAgentRuntime = ({
       return result
     },
     attachWebContents: (webContents: AgentLiveWebContents): (() => void) => {
+      if (!isAllowedLiveAgentWebContents(webContents, senderPolicy)) return () => undefined
       targets.add(webContents)
       return () => targets.delete(webContents)
     },

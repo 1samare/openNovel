@@ -266,6 +266,27 @@
 - [ ] Run focused tests, full tests, README contract, typecheck and build.
 - [ ] Commit as `feat: add agent harness workspace`.
 
+### Task 5 Fix Round 1：加固 IPC 生命周期与 Sender 边界
+
+**修改目标：** 修复 Task 5 复审发现的 preload 产物路径、启动恢复时序、窗口事件附着生命周期、sender URL/frame 校验与 IPC 注册所有权问题，使 Electron 安全桥在生产构建和重复生命周期下保持可用且最小授权。
+
+**修改范围与明确不包含的内容：** 仅调整 Agent IPC/runtime/preload/main 生命周期、相关安全边界测试、Task 5 文档与受影响 README；不启动 GUI、不接入真实模型/网络/新业务 UI、不修改 Agent 核心状态机或持久化格式、不推送远端。
+
+**涉及的文件：**
+- Modify: `src/main/index.ts`, `src/main/agent-runtime.ts`, `src/main/agent-ipc.ts`, `src/main/agent-ipc-security.ts`, `tests/agent-ipc.test.mjs`, `tests/electron-foundation.test.mjs`
+- Modify: `README.md`, `src/README.md`, `src/main/README.md`, `src/preload/README.md`, `src/shared/README.md`, `tests/README.md`, `docs/README.md`, `docs/2026-07-28/README.md`
+- Modify: this implementation plan and `.superpowers/sdd/Harness Agent离线闭环实现计划/task-5-report.md`
+
+**实施步骤：**
+1. 先为 preload `.mjs` 构建产物、恢复先于 IPC/窗口、延后附着和销毁解绑、hash/query/凭据/destroyed-frame sender 拒绝、重复注册与陈旧 disposer 写入聚焦 RED 用例。
+2. 以构建配置的实际 preload 文件名修正 BrowserWindow 路径，并在最终构建后检查该被引用的工件存在。
+3. 让 runtime 恢复可等待且失败被记录/处理；仅在恢复完成后注册 IPC 和创建窗口；页面完成加载并通过 URL 策略后才附着，hash 路由保持附着，窗口销毁时解绑，并在应用退出时释放 IPC/runtime。
+4. 收紧 sender 策略：生产只接受同一 file document 的 hash 路由，拒绝 query/其他文件/凭据/畸形 URL；开发策略同时拒绝策略 URL 与候选 URL 中的凭据，并拒绝 destroyed 或抛错 frame。
+5. 让 IPC 注册返回 disposer，支持 `removeHandler`、相同 ipcMain 幂等注册，以及陈旧 disposer 不影响较新注册。
+6. 同步所有受影响 README、任务报告和计划实际结果；运行聚焦/全量/README/类型/构建/差异检查，检查实际 preload 工件，最后本地提交。
+
+**验证方式与通过标准：** 新增行为先按预期 RED；聚焦测试覆盖全部复审项且 GREEN。最终 `npm.cmd test`、`npm.cmd run check:readmes`、`npm.cmd run typecheck`、`npm.cmd run build`、`git diff --check` 均退出码 0，且由主进程引用的 `out/preload/index.mjs` 实际存在；不启动 GUI、不推送。
+
 ### Task 7: 全量验收、文档回填与最终审查
 
 **Files:**
@@ -379,3 +400,9 @@
 - RED：在创建 Task 5 生产模块前，`node --experimental-strip-types --test tests/agent-ipc.test.mjs tests/electron-foundation.test.mjs` 以退出码 1 结束。新 IPC 测试因缺少 `src/shared/agent-ipc.ts` 报 `ERR_MODULE_NOT_FOUND`，preload 架构契约因未暴露 `openNovel.agent` 失败。
 - 实际实现：新增固定七个命令和一个事件通道、逐命令参数守卫、顶层当前 `file:` 页面/精确开发服务器 origin 的 sender 白名单。IPC 处理器拒绝未授权 sender，将异常和不安全错误规范化为固定 `AgentResult`，不返回路径或堆栈。主进程以 `app.getPath('userData')/agent-runs` 组合 JSON Repository、Mock Executor 和 Orchestrator，执行启动恢复并只向授权存活页面发送克隆事件。预加载仅暴露 `window.openNovel.agent` 的八个命名方法，事件回调仅接收校验且克隆的 `AgentEvent`；日志严格只保留安全操作元数据。
 - GREEN：聚焦 IPC 和 Electron 基础套件通过 10/10；全量 `npm.cmd test` 通过 60/60；`npm.cmd run check:readmes`、Node/Web `npm.cmd run typecheck`、`npm.cmd run build` 和 `git diff --check` 全部以退出码 0 完成。未启动 GUI，未推送远端。
+
+### Task 5 Fix Round 1：加固 IPC 生命周期与 Sender 边界
+
+- RED：在任何 Fix Round 1 生产改动前，`node --experimental-strip-types --test tests/agent-ipc.test.mjs tests/electron-foundation.test.mjs` 以退出码 1 结束：file hash 路由被拒绝、重复注册计数为 14、生命周期 helper 缺失，且主进程仍引用 `index.js`。同次还发现异步 Mock stream 的临时目录清理可触发 `ENOTEMPTY`，测试清理现使用有限重试。
+- 实际实现：BrowserWindow 改为指向 `preload/index.mjs`。启动 helper 先等待并处理恢复失败，再注册 IPC 和创建窗口；应用退出时统一释放 IPC 与 runtime。页面仅在 `did-finish-load` 后、且 URL 已授权时附着转发；hash 路由保持附着，webContents 销毁或窗口关闭会解绑。sender 策略接受同一 file document 的任意 hash，拒绝 query、其他文件、凭据、畸形 URL、销毁/抛错 frame 和不一致 top frame；开发策略拒绝配置或候选 URL 凭据。IPC 注册新增 `removeHandler` disposer、同一 ipcMain 幂等和陈旧 disposer 保护。
+- GREEN 与验证：聚焦套件通过 14/14；全量 `npm.cmd test` 通过 64/64；`npm.cmd run check:readmes`、`npm.cmd run typecheck`、`npm.cmd run build`、`git diff --check` 均以退出码 0 完成。构建后已直接检查 `out/preload/index.mjs` 存在，文件大小为 5,951 bytes。未启动 GUI，未推送；本轮以 `fix: harden agent ipc lifecycle` 独立本地提交。

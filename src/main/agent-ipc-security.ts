@@ -6,12 +6,17 @@ export type AgentSenderPolicy = {
 export type AgentIpcSender = {
   getURL(): string
   isDestroyed?(): boolean
-  mainFrame?: unknown
+  mainFrame?: AgentFrame | null
+}
+
+export type AgentFrame = {
+  url: string
+  isDestroyed?(): boolean
 }
 
 export type AgentIpcSenderEvent = {
   sender: AgentIpcSender
-  senderFrame?: { url: string } | null
+  senderFrame?: AgentFrame | null
 }
 
 export type AgentLiveWebContents = {
@@ -33,12 +38,28 @@ const isAllowedUrl = (value: string, policy: AgentSenderPolicy): boolean => {
   const candidate = parseUrl(value)
   if (candidate === undefined) return false
   const appPage = parseUrl(policy.appPageUrl)
-  if (appPage !== undefined && appPage.protocol === 'file:' && candidate.href === appPage.href) {
+  if (
+    appPage !== undefined &&
+    appPage.protocol === 'file:' &&
+    appPage.username === '' &&
+    appPage.password === '' &&
+    appPage.search === '' &&
+    candidate.protocol === 'file:' &&
+    candidate.username === '' &&
+    candidate.password === '' &&
+    candidate.search === '' &&
+    candidate.host === appPage.host &&
+    candidate.pathname === appPage.pathname
+  ) {
     return true
   }
   const devOrigin = parseUrl(policy.devServerOrigin)
   return devOrigin !== undefined &&
     (devOrigin.protocol === 'http:' || devOrigin.protocol === 'https:') &&
+    devOrigin.username === '' &&
+    devOrigin.password === '' &&
+    candidate.username === '' &&
+    candidate.password === '' &&
     candidate.origin === devOrigin.origin
 }
 
@@ -53,6 +74,9 @@ export const isAllowedAgentIpcSender = (
       senderFrame === undefined ||
       senderFrame === null ||
       event.sender.mainFrame === undefined ||
+      event.sender.mainFrame === null ||
+      senderFrame.isDestroyed?.() === true ||
+      event.sender.mainFrame.isDestroyed?.() === true ||
       senderFrame !== event.sender.mainFrame
     ) return false
     const senderUrl = event.sender.getURL()

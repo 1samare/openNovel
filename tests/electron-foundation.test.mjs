@@ -12,6 +12,7 @@ test('Electron 窗口采用隔离且无 Node 注入的安全默认值', async ()
   assert.match(source, /nodeIntegration:\s*false/)
   assert.match(source, /sandbox:\s*true/)
   assert.match(source, /setWindowOpenHandler/)
+  assert.match(source, /preload:\s*join\(__dirname, '\.\.\/preload\/index\.mjs'\)/)
 })
 
 test('预加载层仅暴露命名 Agent 桥接且不暴露通用 Electron 或 Node API', async () => {
