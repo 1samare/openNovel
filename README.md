@@ -30,6 +30,8 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 
 - 2026-07-28：更新 Agent 最小命名桥接及其主进程 sender 安全边界说明。
 
+- 2026-07-28：登记 Harness Agent UI Fix Round 1 的异步状态、重试、可访问性和响应式加固范围。
+
 ## 技术栈
 
 - Electron

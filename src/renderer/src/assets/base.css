@@ -400,6 +400,7 @@ button:disabled {
 
 .agent-composer__copy label,
 .agent-composer__copy p,
+.agent-field-error,
 .agent-notice p,
 .agent-empty,
 .approval-card p,
@@ -439,6 +440,17 @@ button:disabled {
 .agent-composer textarea:disabled,
 .agent-button:disabled {
   opacity: 0.5;
+}
+
+.agent-field-error,
+.agent-run-error {
+  color: var(--agent-danger);
+  font-weight: 700;
+}
+
+.agent-field-error {
+  grid-column: 2 / -1;
+  margin: -8px 0 0;
 }
 
 .agent-button {
@@ -594,6 +606,22 @@ button:disabled {
   gap: 8px;
 }
 
+.agent-action-status {
+  min-height: 1.25rem;
+  margin: -8px 0 10px;
+  color: var(--agent-muted);
+  font-size: 0.86rem;
+}
+
+.agent-run-error {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border: 1px solid #e9bdb6;
+  border-radius: 12px;
+  background: var(--agent-danger-soft);
+  line-height: 1.5;
+}
+
 .run-list__meta time,
 .agent-timeline time {
   color: var(--agent-muted);
@@ -739,6 +767,16 @@ button:disabled {
   line-height: 1.6;
 }
 
+@media (max-width: 1100px) {
+  .agent-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .run-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 820px) {
   .project-center__content {
     grid-template-columns: 1fr;
@@ -779,6 +817,34 @@ button:disabled {
 }
 
 @media (max-width: 520px) {
+  .workspace-shell {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .workspace-sidebar {
+    padding: 12px 8px;
+  }
+
+  .workspace-brand,
+  .workspace-nav__item {
+    min-height: 44px;
+    padding: 8px;
+  }
+
+  .workspace-topbar {
+    min-height: 64px;
+    padding: 0 12px;
+  }
+
+  .workspace-topbar div span {
+    display: none;
+  }
+
+  .workspace-topbar .secondary-link {
+    padding: 9px;
+    font-size: 0.76rem;
+  }
+
   .workspace-page.agent-harness {
     padding: 22px 16px;
   }
@@ -798,6 +864,11 @@ button:disabled {
   .run-detail-panel,
   .agent-composer {
     padding: 16px;
+  }
+
+  .agent-field-error {
+    grid-column: auto;
+    margin-top: -8px;
   }
 }
 

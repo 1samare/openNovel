@@ -8,7 +8,7 @@
 
 - `Harness Agent离线闭环架构设计.md`：已批准的运行时边界、数据流与安全策略。
 - `Harness Agent离线闭环实现计划.md`：按 TDD 和子 Agent 审查执行的任务清单。
-- Task 6 记录：AI 对话 Harness UI、渲染层事件合并和验证结果已回填至实施计划。
+- Task 6 记录：AI 对话 Harness UI、渲染层事件合并和验证结果已回填至实施计划；Fix Round 1 记录异步状态、重试、可访问性和窄屏布局加固。
 
 ## 依赖边界
 
@@ -52,3 +52,5 @@
 - 2026-07-28：登记 Task 5 Fix Round 1 Minor 的 production file hash 路由精确匹配计划。
 - 2026-07-28：回填 Task 5 Fix Round 1 Minor 的空 query sender 回归与全量质量验证结果。
 - 2026-07-28：回填 Task 6 的 Harness Agent UI、事件回补和完整质量门禁结果。
+- 2026-07-28：登记 Task 6 Fix Round 1 的异步状态机、可重试操作、可访问性与响应式复审修复计划。
+- 2026-07-28：回填 Task 6 Fix Round 1 的拒绝规范化、命令锁、事件队列恢复和响应式验证结果。

@@ -266,6 +266,28 @@
 - [x] Run focused tests, full tests, README contract, typecheck and build.
 - [x] Commit as `feat: add agent harness workspace`.
 
+### Task 6 Fix Round 1：加固 Harness UI 异步状态与可访问性
+
+**修改目标：** 修复 Task 6 复审发现的 Agent API 拒绝、事件队列中断、重叠加载、并发命令、操作重试、Prompt 错误可访问性与窄屏布局问题，使 UI 不会以陈旧结果回退或暴露不可执行操作。
+
+**修改范围与明确不包含的内容：** 仅修改 Harness Agent 渲染控制器、页面、共享样式、行为测试、对应 README、既有计划与 Task 6 报告；不改变 Task 5 的公开 `window.openNovel.agent` API，不导入 Electron/Node，不增加依赖、状态库或 UI 库，不启动 GUI、不接入真实模型/网络、不推送远端。
+
+**涉及的文件：**
+- Modify: `src/renderer/src/agent/use-agent-harness.ts`, `src/renderer/src/views/AgentHarnessView.vue`, `src/renderer/src/assets/base.css`, `tests/agent-harness.test.mjs`
+- Modify: `src/renderer/src/agent/README.md`, `src/renderer/src/views/README.md`, `src/renderer/src/assets/README.md`, `src/renderer/src/README.md`, `src/renderer/README.md`, `tests/README.md`
+- Modify: `README.md`, `docs/README.md`, `docs/2026-07-28/README.md`, this implementation plan and `.superpowers/sdd/Harness Agent离线闭环实现计划/task-6-report.md`
+
+**实施步骤：**
+1. 先加入可控 deferred/rejecting API 的 RED 行为用例，复现拒绝后 busy 未释放、事件队列停止、并发命令穿透、重叠初始化/刷新陈旧回写、操作重试以及 dispose 后再次初始化。
+2. 为所有 API 调用建立安全的 `EXECUTION_FAILED` 规范化、finally 释放和请求 generation/token；事件队列在单项失败后继续消费，dispose 失效待处理结果并清空 busy 状态。
+3. 用同步获取的全局命令锁与所有权 token 串行创建/审批/取消/恢复；调用前重检状态门控，结果只在当前 token 下写回，且事件处理不受锁阻塞。
+4. 保存可安全重试的 list/create/action/backfill/refresh 操作和原始参数；`retry()` 精确重发失败操作并重新校验状态，公开操作专用 `retryLabel`，无法安全重试时不提供重试入口。
+5. 补齐 Prompt 的错误 ID、`aria-invalid`、`aria-describedby` 与空提交焦点返回；为选中 Run 状态、动作和流式输出增加克制的 live status。最终输出在 final 流期间可见，失败 Run 安全显示错误。
+6. 将 Agent 工作区和 Run 摘要在可读宽度处纵向堆叠；在 <=520px 收窄侧栏/顶栏并保留可见或可访问的完整导航和 >=44px 目标；时间线仅显示紧凑 delta 元数据，不重复累积文本。
+7. 同步 README、计划与报告，运行聚焦/全量/README/类型/构建/差异检查，最后以独立本地提交保存。
+
+**验证方式与通过标准：** 新增异步行为测试必须先按预期 RED；拒绝和抛出都返回安全且可重试的 `EXECUTION_FAILED`，busy 在 finally 释放，陈旧 generation/token 不可覆盖新状态，队列可在失败后继续处理。重复/冲突命令只产生一次 API 调用，重试准确重发原操作；Prompt、失败 Run、流式 final、live 区域和紧凑时间线均可观察。最终 `node --experimental-strip-types --test tests/agent-harness.test.mjs`、`npm.cmd test`、`npm.cmd run check:readmes`、`npm.cmd run typecheck`、`npm.cmd run build` 和 `git diff --check` 均以退出码 0 完成；不启动 GUI、不推送。
+
 ### Task 5 Fix Round 1：加固 IPC 生命周期与 Sender 边界
 
 **修改目标：** 修复 Task 5 复审发现的 preload 产物路径、启动恢复时序、窗口事件附着生命周期、sender URL/frame 校验与 IPC 注册所有权问题，使 Electron 安全桥在生产构建和重复生命周期下保持可用且最小授权。
@@ -437,3 +459,11 @@
 - RED：先新增 `tests/agent-harness.test.mjs`，执行 `node --experimental-strip-types --test tests/agent-harness.test.mjs` 以退出码 1 结束，明确报 `ERR_MODULE_NOT_FOUND`：缺少 `src/renderer/src/agent/use-agent-harness.ts`。该失败发生在任何 Task 6 生产模块创建之前。
 - GREEN：同一聚焦命令随后通过 5/5，行为覆盖订阅先于加载、加载期间事件合并、序列缺口回补/去重/刷新、命令状态门控与结果写回、错误恢复和取消订阅；另验证专用路由及可访问控件契约。
 - 验证：`npm.cmd test` 通过 69/69；`npm.cmd run check:readmes` 通过；`npm.cmd run typecheck` 的 Node 与 Web 检查通过；`npm.cmd run build` 的 main、preload 和 renderer 生产构建通过；`git diff --check` 未报告空白错误。未启动 GUI，未推送远端；以 `feat: add agent harness workspace` 创建独立本地提交。
+
+### Task 6 Fix Round 1：Harness UI 异步状态与可访问性加固
+
+- RED：先在 `tests/agent-harness.test.mjs` 增加 deferred/rejecting bridge、并发创建/审批/取消、回补拒绝后的第二个 Run、重叠初始化/重试、陈旧刷新和 dispose，以及控制器状态搭配页面契约用例。`node --experimental-strip-types --test tests/agent-harness.test.mjs` 以退出码 1 结束：create rejection 直接冒泡；重复 create 计数为 2；回补 rejection 形成未处理拒绝；较早列表快照覆盖了较新加载；页面缺少 `aria-invalid`。这些失败直接复现复审的 6 项 Important 与 2 项 Minor。
+- 实际实现：全部 Agent API promise 均经安全边界转换，抛出/拒绝统一为可重试的 `EXECUTION_FAILED`；加载和命令以 finally 清理 busy 状态。加载使用 generation，刷新使用 Run revision/generation，dispose 失效待处理结果并使重新 initialize 成为安全 no-op。事件队列吞掉单项失败后继续后续 Run；命令通过同步全局锁、调用前重检门控和所有权 token 串行化。
+- 重试与界面：控制器保留 list/create/action/backfill/refresh 的精确操作与参数，重试时重新调用原操作并给出操作专用标签。Prompt 增加错误 ID、`aria-invalid`、描述关系与 nextTick 焦点恢复；选中状态、动作和流式 final 使用克制 live status。final 流在完成前显示，失败 Run 展示安全错误；时间线只显示阶段/序号，不重复 chunk 文本。1100px 堆叠工作区和摘要，520px 使用 64px 导航轨道与紧凑顶栏。
+- GREEN：`node --experimental-strip-types --test tests/agent-harness.test.mjs` 通过 10/10；覆盖拒绝规范化、finally 释放、精确 create/action/backfill 重试、命令锁、同步双 Run 事件、代际陈旧结果、dispose no-op、流式 final 和页面可访问性/紧凑时间线契约。
+- 验证：`npm.cmd run check:readmes` 通过；`npm.cmd test` 通过 74/74；`npm.cmd run typecheck` 的 Node 与 Web 检查通过；`npm.cmd run build` 的 main、preload 和 renderer 生产构建通过；`git diff --check` 未报告空白错误。未启动 GUI，未推送远端；以 `fix: harden harness ui state` 创建独立本地提交。

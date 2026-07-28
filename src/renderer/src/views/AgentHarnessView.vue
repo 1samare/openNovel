@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 
 import type { AgentEvent, AgentRun, RunStatus } from '@shared/agent'
 import { useAgentHarness } from '@renderer/agent/use-agent-harness'
@@ -41,9 +41,16 @@ const timeline = computed(() => selected.value === undefined
   : [...selected.value.events].sort((left, right) => left.sequence - right.sequence)
 )
 const actionsBusy = computed(() => harness.state.action !== undefined)
+const promptInput = ref<HTMLTextAreaElement>()
 
 const selectRun = (id: string): void => harness.selectRun(id)
-const createRun = (): void => { void harness.create() }
+const createRun = async (): Promise<void> => {
+  await harness.create()
+  if (harness.state.promptError !== undefined) {
+    await nextTick()
+    promptInput.value?.focus()
+  }
+}
 const approveSelected = (): void => {
   if (selected.value !== undefined) void harness.approve(selected.value.id)
 }
@@ -75,12 +82,17 @@ onMounted(() => { void harness.initialize() })
       </div>
       <textarea
         id="agent-prompt"
+        ref="promptInput"
         v-model="harness.state.prompt"
-        aria-describedby="agent-prompt-helper"
+        :aria-describedby="harness.state.promptError === undefined ? 'agent-prompt-helper' : 'agent-prompt-helper agent-prompt-error'"
+        :aria-invalid="harness.state.promptError === undefined ? undefined : 'true'"
         :disabled="actionsBusy"
         placeholder="例如：梳理这一章的冲突升级，并给出可执行的下一步。"
         rows="3"
       />
+      <p v-if="harness.state.promptError" id="agent-prompt-error" class="agent-field-error" role="alert">
+        {{ harness.state.promptError }}
+      </p>
       <button class="agent-button agent-button--primary" type="submit" :disabled="actionsBusy">
         {{ harness.state.action === 'create' ? '正在创建 Run…' : '创建 Run' }}
       </button>
@@ -98,7 +110,7 @@ onMounted(() => { void harness.initialize() })
         :disabled="harness.state.loading"
         @click="harness.retry"
       >
-        重试加载
+        {{ harness.retryLabel }}
       </button>
       <p v-else class="agent-notice__hint">此错误不可自动重试，请调整输入或检查本地 Agent 服务状态。</p>
     </section>
@@ -152,7 +164,9 @@ onMounted(() => { void harness.initialize() })
             <span class="eyebrow">SELECTED RUN</span>
             <h2 id="run-detail-title">执行详情</h2>
           </div>
-          <span class="agent-status" :data-status="selected.status">{{ statusLabels[selected.status] }}</span>
+          <span class="agent-status" :data-status="selected.status" role="status" aria-live="polite" aria-atomic="true">
+            {{ statusLabels[selected.status] }}
+          </span>
         </div>
 
         <dl class="run-summary">
@@ -201,8 +215,11 @@ onMounted(() => { void harness.initialize() })
             {{ harness.state.action === 'cancel' ? '正在取消…' : '取消 Run' }}
           </button>
         </div>
+        <p class="agent-action-status" role="status" aria-live="polite" aria-atomic="true">
+          {{ harness.state.action === undefined ? '' : '正在处理 Run 操作，请稍候。' }}
+        </p>
 
-        <section class="agent-output" aria-labelledby="analysis-output-title">
+        <section class="agent-output" aria-labelledby="analysis-output-title" aria-live="polite">
           <div>
             <span class="eyebrow">STREAMED ANALYSIS</span>
             <h3 id="analysis-output-title">分析输出</h3>
@@ -211,7 +228,13 @@ onMounted(() => { void harness.initialize() })
           <p v-else class="agent-empty">流式分析会在这里逐步显示。</p>
         </section>
 
-        <section v-if="selected.status === 'completed'" class="agent-output agent-output--result" aria-labelledby="final-output-title">
+        <section
+          v-if="selected.output.final || selected.status === 'completed'"
+          class="agent-output agent-output--result"
+          aria-labelledby="final-output-title"
+          aria-live="polite"
+          aria-atomic="false"
+        >
           <div>
             <span class="eyebrow">COMPLETED RESULT</span>
             <h3 id="final-output-title">最终结果</h3>
@@ -219,6 +242,10 @@ onMounted(() => { void harness.initialize() })
           <p v-if="selected.output.final">{{ selected.output.final }}</p>
           <p v-else class="agent-empty">该 Run 已完成，但没有返回最终文本。</p>
         </section>
+
+        <p v-if="selected.status === 'failed' && selected.error" class="agent-run-error" role="alert">
+          {{ selected.error.code }}：{{ selected.error?.message }}
+        </p>
 
         <section class="agent-timeline" aria-labelledby="timeline-title">
           <div class="agent-panel__heading">
@@ -233,7 +260,9 @@ onMounted(() => { void harness.initialize() })
               <span class="agent-timeline__sequence">{{ event.sequence }}</span>
               <div>
                 <strong>{{ eventLabels[event.type] }}</strong>
-                <p v-if="event.type === 'step.delta' && typeof event.payload.text === 'string'">{{ event.payload.text }}</p>
+                <p v-if="event.type === 'step.delta'">
+                  {{ event.payload.phase === 'final' ? '最终输出块' : '分析输出块' }} · 序号 {{ event.sequence }}
+                </p>
                 <time :datetime="event.timestamp">{{ new Date(event.timestamp).toLocaleTimeString() }}</time>
               </div>
             </li>

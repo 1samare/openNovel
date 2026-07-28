@@ -8,7 +8,7 @@
 
 - `ProjectCenterView.vue`：项目中心页面。
 - `WorkspacePlaceholderView.vue`：各一级模块的占位页面。
-- `AgentHarnessView.vue`：AI 对话的离线 Agent Run 创建、审批、时间线、错误和恢复页面。
+- `AgentHarnessView.vue`：AI 对话的离线 Agent Run 创建、审批、时间线、错误和恢复页面，包含 Prompt 错误恢复、状态播报、流式 final 与失败 Run 诊断。
 
 ## 依赖边界
 
@@ -22,3 +22,4 @@
 
 - 2026-07-28：建立页面目录 README 契约。
 - 2026-07-28：新增 Harness Agent 专用工作台页面。
+- 2026-07-28：补充 Prompt 可访问错误状态、流式 final、失败诊断和紧凑时间线呈现。
