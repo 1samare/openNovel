@@ -338,9 +338,9 @@
 - [x] Run `npm.cmd run check:readmes`, `npm.cmd test`, `npm.cmd run typecheck`, and `npm.cmd run build`.
 - [x] Start Electron, verify create/stream/approve, cancel, close/restart and resume paths, then terminate only the spawned process tree.
 - [x] Update README capabilities/limitations and append actual files, deviations and validation results to this plan.
-- [ ] Run the full quality gate again after documentation changes.
-- [ ] Commit as `docs: record harness agent verification`.
-- [ ] Dispatch final whole-branch review and resolve all Critical/Important findings before finishing the branch.
+- [x] Run the full quality gate again after documentation changes.
+- [x] Commit as `docs: record harness agent verification`.
+- [x] Dispatch final whole-branch review and resolve all Critical/Important findings before finishing the branch.
 
 ### Task 7 Validation Fix Round 1：修复沙箱 Preload 的生产构建格式
 
@@ -585,3 +585,5 @@
 - 实际实现：`listRuns` 仅返回仓储列表与 issues，不再回写 `this.runs`；唯一的 `step.started` 追加路径在每 Run mutation queue 内验证当前仍为 running；启动恢复对 queued 快照调用既有 `beginPhase(id, 'analysis', 'run.started')`，而遗留 running 仍按原规则持久化为 interrupted 并等待用户显式恢复。
 - GREEN：三个回归用例分别单独通过，完整 Orchestrator 聚焦套件通过 19/19；取消状态保持权威、取消后无步骤事件、queued 重启执行到 awaiting_approval。
 - 全量验证：`npm.cmd run check:readmes` 通过；`npm.cmd test` 通过 83/83；`npm.cmd run typecheck` 的 Node/Web 检查通过；`npm.cmd run build` 成功生成 main、CommonJS preload 和 renderer 产物。
+- 最终复审：原代码/安全审查的 1 Critical 与 2 Important 均经确定性测试关闭，复审结论为 `code/security review clean`；另一名独立 Agent 对批准规格、Public Contracts、README、CI 和闭环范围复审，结论为 `spec review clean`。
+- 本地提交：生产真实验收修复保存为 `d95648e fix: complete production harness validation`；Orchestrator 最终审查修复保存为 `99825e7 fix: close orchestrator recovery races`；最终验证记录以 `docs: record harness agent verification` 提交。全程未推送远端。
