@@ -2,7 +2,7 @@
 
 ## 目录用途
 
-存放与 Electron、Vue 无关的 Agent 运行期核心：错误转换、输入校验和 Run 状态转换。
+存放与 Electron、Vue 无关的 Agent 运行期核心：错误转换、输入校验、Run 状态转换、离线执行器和 Run 编排。
 
 ## 内容说明
 
@@ -10,10 +10,13 @@
 - `validation.ts`：Prompt、Run 状态、十二种公共事件、结果分支及含输出/检查点 Run 快照的运行时校验；payload 与嵌套对象必须为普通 JSON 对象，Run 事件序号和 `runId` 必须连续且归属一致。
 - `state-machine.ts`：Run 的合法状态转换表和不可变状态转换函数。
 - `repository.ts`：注入存储根目录的 JSON Run 仓储，严格接受仅含 `schemaVersion` 与 `run` 的 schemaVersion 1 envelope，使用同目录临时文件重命名和无绝对路径的加载诊断；公开失败映射为验证或持久化错误，replace 操作可注入以验证失败保护。
+- `executor.ts`：定义带 Prompt、阶段、检查点索引和 `AbortSignal` 的流式执行器边界。
+- `mock-executor.ts`：提供可注入延迟和确定性分析/最终文本块的离线执行器。
+- `orchestrator.ts`：按单 Run 串行队列编排创建、流式步骤、审批、取消、失败、事件回补和重启恢复；每次事件变更均在持久化成功后才更新内存并通知订阅者。
 
 ## 依赖边界
 
-本目录只依赖 `src/shared/agent.ts` 的纯契约；不得导入 Electron、Vue、IPC 或网络模块。仅 `repository.ts` 可以使用 Node 文件系统与路径模块，且存储位置必须由构造参数注入。
+本目录只依赖 `src/shared/agent.ts` 的纯契约；不得导入 Electron、Vue、IPC 或网络模块。`repository.ts` 可以使用 Node 文件系统与路径模块，`orchestrator.ts` 仅使用 Node 的随机 ID 默认值；存储位置、执行器、时钟和 ID 都必须可由构造参数注入。
 
 ## 维护规则
 
@@ -30,3 +33,4 @@
 - 2026-07-28：迁移至已批准的公共错误、事件、结果、分阶段输出和检查点契约，保留 JSON 快照的原子替换与恢复诊断语义。
 - 2026-07-28：收紧审查发现的错误与 JSON payload 守卫，拒绝 Error/异类对象、额外字符串或符号键和非普通 payload，并隔离 hostile getter/Proxy 的错误转换。
 - 2026-07-28：要求 Agent 错误的全部必填字段为可枚举数据属性，避免守卫接受无法 JSON 往返的非枚举或 accessor 值。
+- 2026-07-28：新增 Mock Executor 与 Agent Orchestrator，以串行持久化事件驱动审批、取消、失败与恢复闭环。

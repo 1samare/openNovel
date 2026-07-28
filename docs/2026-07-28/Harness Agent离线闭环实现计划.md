@@ -201,11 +201,11 @@
 - Consumes: Task 2 contracts/state machine and Task 3 repository.
 - Produces: `AgentExecutor` and `AgentOrchestrator` methods `createRun`, `getRun`, `listRuns`, `getEvents`, `approveRun`, `cancelRun`, `resumeRun`, `recoverInterruptedRuns`, `subscribe`.
 
-- [ ] Write tests for strict event sequence, streaming, approval pause, completion, cancellation, execution failure, concurrent commands, persistence-before-notify, event backfill and restart recovery without duplicate chunks.
-- [ ] Run focused test and confirm expected RED failure.
-- [ ] Implement deterministic analysis/final chunks, injected delay/clock/id, per-Run mutation queues and AbortController cancellation.
-- [ ] Run focused tests, full tests, README contract and typecheck.
-- [ ] Commit as `feat: orchestrate offline agent runs`.
+- [x] Write tests for strict event sequence, streaming, approval pause, completion, cancellation, execution failure, concurrent commands, persistence-before-notify, event backfill and restart recovery without duplicate chunks.
+- [x] Run focused test and confirm expected RED failure.
+- [x] Implement deterministic analysis/final chunks, injected delay/clock/id, per-Run mutation queues and AbortController cancellation.
+- [x] Run focused tests, full tests, README contract and typecheck.
+- [x] Commit as `feat: orchestrate offline agent runs`.
 
 ### Task 5: Electron 安全 IPC、Preload API 与结构化日志
 
@@ -328,3 +328,10 @@
 - RED：在不改生产代码前，为非枚举 `message` 和状态型 `message` accessor 添加行为用例，并把两类错误和 sequence/runId 不连贯 Run 加入 Repository 的真实快照保留表。`node --experimental-strip-types --test tests/agent-state-machine.test.mjs tests/agent-repository.test.mjs` 以退出码 1 结束：状态型 accessor 被 `isAgentError` 接受，Repository 成功写入本应无效的 Run。
 - 实际实现：`isAgentError` 通过一次 `Object.getOwnPropertyDescriptors` 快照及完整自有键检查，只接受 `code`、`message`、`retryable` 三个可枚举数据描述符；非枚举字段和任意 accessor 都被拒绝。`toAgentError` 直接从同一描述符快照构造合格错误，或最多一次读取非合格字段的 getter，因此状态型 accessor 得到新建、有效且稳定的三字段结果。Repository 在写入前拒绝这些错误对象和不连贯 sequence/runId，原快照字节及重载结果均保持不变。
 - GREEN：同一聚焦命令通过 22/22；`npm.cmd test` 通过 38/38；`npm.cmd run check:readmes` 通过；`npm.cmd run typecheck` 的 Node 与 Web 检查均通过；`git diff --check` 未报告空白错误。
+
+### Task 4：Mock Executor 与 Agent Orchestrator
+
+- RED：先添加 `tests/agent-orchestrator.test.mjs` 的离线闭环行为用例。`node --experimental-strip-types --test tests/agent-orchestrator.test.mjs` 按预期以 `ERR_MODULE_NOT_FOUND` 失败，缺失模块为 `src/agent/mock-executor.ts`。
+- 实际实现：新增 `AgentExecutor` 流式边界和确定性 `MockExecutor`，其文本块与延迟均可注入，并在每次生成前后检查 `AbortSignal`。`AgentOrchestrator` 注入仓储、执行器、时钟与 ID；创建先原子持久化 queued/created 快照并异步驱动。每个事件变更按“追加事件 → 持久化快照 → 更新内存 → 通知订阅者”完成；每个 Run 使用独立串行队列，取消先中止活跃控制器再排队提交取消。审批驱动 final 阶段，执行错误映射为 `EXECUTION_FAILED`，未知 ID 映射为 `RUN_NOT_FOUND`，恢复将持久化 running Run 变为 interrupted，显式恢复从 `{ phase, nextChunkIndex }` 继续而不重复文本块。
+- GREEN：聚焦用例通过 6/6，覆盖严格事件序列、分析/最终流、审批暂停与完成、取消、执行器失败、并发审批/取消、持久化先于通知、事件回补，以及重启恢复去重。
+- 验证：`npm.cmd test` 通过 44/44；`npm.cmd run check:readmes` 通过；`npm.cmd run typecheck` 的 Node 与 Web 检查均通过；`git diff --check` 未报告空白错误（仅有 Git 的 LF/CRLF 转换提示）。

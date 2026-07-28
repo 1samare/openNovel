@@ -38,3 +38,4 @@
 - 2026-07-28：同步 Task 2 Fix Round 2 的公共契约迁移、TDD RED/GREEN 和质量验证记录。
 - 2026-07-28：登记 Task 2 Fix Round 2 审查修复，收紧错误、JSON payload 与 Run 序列/归属守卫。
 - 2026-07-28：登记 Task 2 Fix Round 2 第二轮审查修复，要求 Agent 错误使用可序列化数据描述符。
+- 2026-07-28：回填 Task 4 的 Mock Executor、串行 Agent Orchestrator 与离线闭环验证记录。
