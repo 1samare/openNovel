@@ -14,7 +14,7 @@
 - `agent-repository.test.mjs`：使用真实临时目录验证迁移后公共契约下的 JSON Run 快照原子保存、重载、事件筛选、严格 envelope 诊断，以及不可序列化错误、非 JSON payload 和不连贯事件等无效输入不会替换有效快照。
 - `agent-orchestrator.test.mjs`：使用内存仓储和可控离线执行器验证严格事件序列、审批持久化/恢复原子边界、legacy final checkpoint 审批证明修正、监听器快照隔离、仓储错误与列表诊断传播、Mock Executor 的分析/final chunk 选择与进行中中止、取消竞态、事件回补及恢复检查点去重。
 - `agent-ipc.test.mjs`：验证 Agent IPC 命令参数、仅 hash 可变的完整 production file URL、开发 origin/凭据/销毁 frame sender 守卫、固定且幂等的处理器/disposer、错误脱敏、Preload 事件克隆隔离、结构化日志脱敏，以及恢复/窗口附着生命周期。
-- `agent-harness.test.mjs`：行为化验证渲染层先订阅后加载、加载竞态合并、序列缺口回补/去重/刷新、拒绝规范化、操作级重试、命令锁、陈旧结果隔离、队列恢复与退订，并结合控制器状态和页面契约检查可访问控件、流式 final 与失败诊断。
+- `agent-harness.test.mjs`：行为化验证渲染层先订阅后加载、加载竞态合并、序列缺口回补/去重/刷新、连续 `run.failed` 的安全详情回读与刷新重试、拒绝规范化、操作级重试、命令锁、陈旧结果隔离、队列恢复与退订，并结合控制器状态和页面契约检查可访问控件、流式 final、失败诊断和 520px 顶栏命中区。
 
 ## 依赖边界
 

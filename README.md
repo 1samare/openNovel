@@ -96,7 +96,7 @@ docs/            按日期归档的设计和修改计划
 - Vue 应用、Hash Router 和公共工作台布局；
 - 项目中心及产品一级模块占位页面；
 - Agent Run 的公共契约、运行时校验和纯状态机；
-- `/workspace/chat` 的 Harness Agent 工作台：可创建 Run、查看流式分析与时间线、审批、取消、恢复和本地损坏记录诊断；
+- `/workspace/chat` 的 Harness Agent 工作台：可创建 Run、查看流式分析与时间线、审批、取消、恢复、本地损坏记录诊断及连续失败事件的持久化安全详情；
 - TypeScript 类型检查、结构测试和生产构建命令。
 
 尚未实现：

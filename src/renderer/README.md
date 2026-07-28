@@ -7,7 +7,7 @@
 ## 内容说明
 
 - `index.html`：带有限制性内容安全策略的渲染入口。
-- `src/`：Vue 应用、路由、样式、页面实现、带异步状态保护的 Harness Agent 控制器及 `window.openNovel.agent` 的全局类型声明。
+- `src/`：Vue 应用、路由、样式、页面实现、带异步状态保护和失败详情回读的 Harness Agent 控制器及 `window.openNovel.agent` 的全局类型声明。
 
 ## 依赖边界
 
@@ -23,3 +23,4 @@
 - 2026-07-28：补充受控 Agent preload 桥接类型的渲染进程边界说明。
 - 2026-07-28：接入只使用受控 Agent API 的 Harness Agent 工作台闭环。
 - 2026-07-28：加固受控 Agent API 的拒绝处理、重试与可访问 UI 呈现，继续不导入 Electron 或 Node。
+- 2026-07-28：补齐连续失败事件的持久化错误详情回读和窄屏顶栏 44px 命中区边界。

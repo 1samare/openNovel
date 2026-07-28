@@ -467,3 +467,16 @@
 - 重试与界面：控制器保留 list/create/action/backfill/refresh 的精确操作与参数，重试时重新调用原操作并给出操作专用标签。Prompt 增加错误 ID、`aria-invalid`、描述关系与 nextTick 焦点恢复；选中状态、动作和流式 final 使用克制 live status。final 流在完成前显示，失败 Run 展示安全错误；时间线只显示阶段/序号，不重复 chunk 文本。1100px 堆叠工作区和摘要，520px 使用 64px 导航轨道与紧凑顶栏。
 - GREEN：`node --experimental-strip-types --test tests/agent-harness.test.mjs` 通过 10/10；覆盖拒绝规范化、finally 释放、精确 create/action/backfill 重试、命令锁、同步双 Run 事件、代际陈旧结果、dispose no-op、流式 final 和页面可访问性/紧凑时间线契约。
 - 验证：`npm.cmd run check:readmes` 通过；`npm.cmd test` 通过 74/74；`npm.cmd run typecheck` 的 Node 与 Web 检查通过；`npm.cmd run build` 的 main、preload 和 renderer 生产构建通过；`git diff --check` 未报告空白错误。未启动 GUI，未推送远端；以 `fix: harden harness ui state` 创建独立本地提交。
+
+### Task 6 Fix Round 1 复审收尾：失败详情回读与窄屏顶栏命中区
+
+- 修改目标：在连续 `run.failed` 直播事件合并后，以既有 generation/revision 防陈旧保护回读 `getRun(runId)`，让选中 Run 展示持久化的安全错误详情；并在 `<=520px` 明确保证顶栏 secondary link 的 44px 最小高度和居中 inline-flex 命中区。
+- 范围与不包含：仅补齐 Task 6 Harness controller 的终态失败同步、队列失败后的可恢复重试，以及紧凑 workspace 顶栏样式契约；不修改 IPC/Orchestrator/API，不启动 GUI，不引入依赖。
+- 涉及文件：`src/renderer/src/agent/use-agent-harness.ts`、`src/renderer/src/assets/base.css`、`tests/agent-harness.test.mjs`、对应 renderer/agent/assets/tests/docs README、既有 Task 6 报告与本计划。
+- 实施步骤：先新增行为回归用例，复现 selected running Run 收到连续 `run.failed` 后未回读安全错误详情、以及回读失败时的队列/重试恢复；确认 RED 后仅在连续失败事件路径调用既有 `refreshRun`。补充窄屏样式断言并为 secondary link 添加最小高度和 inline-flex 居中规则，再记录 520px 无横向溢出的视觉目标。
+- 验证方式与通过标准：聚焦 controller 用例证明 `getRun` 被调用、持久化错误安全显示、刷新失败可重试且后续事件仍处理；样式契约覆盖 `<=520px` 44px/居中/无横向溢出。最终运行 `node --experimental-strip-types --test tests/agent-harness.test.mjs`、`npm.cmd test`、`npm.cmd run check:readmes`、`npm.cmd run typecheck`、`npm.cmd run build` 和 `git diff --check`，均退出 0。
+
+- RED：先增加连续失败 Run 的行为用例。`node --experimental-strip-types --test tests/agent-harness.test.mjs` 以退出码 1 结束，新增用例等待 `getRun('active')` 超时，证明连续 `run.failed` 只合并状态、没有回读持久化错误详情。随后增加窄屏顶栏契约用例，定向命令同样以退出码 1 结束，明确缺少 topbar 横向边界与 secondary link 的 44px/居中规则。
+- 实际实现：连续事件合并后，`run.failed` 调用既有带 Run revision/generation 保护的 `refreshRun`；失败结果保留 `重试刷新 Run`，不会抛出到事件队列，后续 Run 仍可处理。`<=520px` 顶栏增加最小宽度与 `overflow-x` 边界，secondary link 明确使用居中 `inline-flex`、44px 最小高度和不收缩的命中区。
+- GREEN：完整 Harness 聚焦套件通过 12/12，覆盖失败回读、刷新失败后的其他 Run 事件、精确刷新重试、安全错误详情与紧凑顶栏样式契约。
+- 最终验证：`npm.cmd run check:readmes` 通过；`npm.cmd test` 通过 76/76；`npm.cmd run typecheck` 的 Node 与 Web 检查通过；`npm.cmd run build` 的 main、preload 与 renderer 生产构建通过；`git diff --check` 通过（仅 Git LF/CRLF 提示）。未启动 GUI，未推送远端。

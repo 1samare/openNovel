@@ -32,3 +32,4 @@
 - 2026-07-28：回填 Task 6 的 Harness Agent 渲染闭环、事件回补与质量验证结果。
 - 2026-07-28：登记 Task 6 Fix Round 1 的 Harness UI 异步状态、重试和可访问性加固计划。
 - 2026-07-28：回填 Task 6 Fix Round 1 的 Harness UI 异步状态、重试、可访问性与响应式验证结果。
+- 2026-07-28：登记 Task 6 Fix Round 1 复审收尾的失败详情回读和窄屏顶栏命中区验证。

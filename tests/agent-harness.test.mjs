@@ -413,6 +413,55 @@ test('ignores stale load and refresh results, and dispose makes later initializa
   assert.equal(controller.runFor('stale'), undefined)
 })
 
+test('refreshes persisted safe failure details after a consecutive run.failed event and keeps the event queue recoverable', async () => {
+  let listener
+  const getRunCalls = []
+  let activeRefreshes = 0
+  const started = event('active', 1, 'run.started')
+  const failedEvent = event('active', 2, 'run.failed', { code: 'EXECUTION_FAILED' })
+  const persistedFailure = {
+    ...run('active', 'failed', [started, failedEvent]),
+    error: { code: 'EXECUTION_FAILED', message: 'Persisted safe failure detail', retryable: true }
+  }
+  const api = {
+    createRun: async () => failed('EXECUTION_FAILED'),
+    getRun: async (id) => {
+      getRunCalls.push(id)
+      if (id === 'active') {
+        activeRefreshes += 1
+        return activeRefreshes === 1
+          ? failed('PERSISTENCE_FAILED', true)
+          : successful(persistedFailure)
+      }
+      return successful(run('other', 'running', [event('other', 1, 'run.started')]))
+    },
+    listRuns: async () => successful({ runs: [run('active', 'running', [started])], issues: [] }),
+    getEvents: async () => successful([]),
+    approveRun: async () => failed('INVALID_STATE'),
+    cancelRun: async () => failed('INVALID_STATE'),
+    resumeRun: async () => failed('INVALID_STATE'),
+    subscribeEvents: (next) => {
+      listener = next
+      return () => undefined
+    }
+  }
+  const controller = createAgentHarnessController(api)
+  await controller.initialize()
+
+  listener(failedEvent)
+  await eventually(() => getRunCalls.includes('active'))
+  await eventually(() => controller.state.error?.code === 'PERSISTENCE_FAILED')
+  assert.equal(controller.runFor('active')?.status, 'failed')
+  assert.equal(controller.retryLabel, '重试刷新 Run')
+
+  listener(event('other', 1, 'run.created'))
+  await eventually(() => controller.runFor('other')?.status === 'running')
+  await controller.retry()
+
+  assert.equal(activeRefreshes, 2)
+  assert.equal(controller.runFor('active')?.error?.message, 'Persisted safe failure detail')
+})
+
 test('keeps final streaming output and failed-run errors observable while the page advertises accessible prompt recovery', async () => {
   let listener
   const running = run('final', 'running', [event('final', 1, 'run.started')])
@@ -454,4 +503,13 @@ test('keeps final streaming output and failed-run errors observable while the pa
   assert.match(view, /selected\.error\?\.message/)
   assert.match(styles, /@media \(max-width: 1100px\)/)
   assert.match(styles, /@media \(max-width: 520px\)/)
+})
+
+test('keeps the compact workspace topbar secondary link centered, 44px tall, and horizontally bounded', async () => {
+  const styles = await readProjectFile('src/renderer/src/assets/base.css')
+  const compactStyles = styles.slice(styles.indexOf('@media (max-width: 520px)'))
+
+  assert.match(compactStyles, /grid-template-columns:\s*64px minmax\(0, 1fr\)/)
+  assert.match(compactStyles, /\.workspace-topbar\s*\{[\s\S]*?min-width:\s*0;[\s\S]*?overflow-x:\s*hidden;/)
+  assert.match(compactStyles, /\.workspace-topbar \.secondary-link\s*\{[\s\S]*?display:\s*inline-flex;[\s\S]*?min-height:\s*44px;[\s\S]*?align-items:\s*center;[\s\S]*?justify-content:\s*center;/)
 })

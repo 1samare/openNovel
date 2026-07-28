@@ -245,7 +245,7 @@ export const createAgentHarnessController = (api: AgentApi): AgentHarnessControl
     }
 
     mergeKnownEvents(event.runId)
-    if (current === undefined) await refreshRun(event.runId)
+    if (current === undefined || event.type === 'run.failed') await refreshRun(event.runId)
   }
 
   const loadRuns = async (): Promise<void> => {

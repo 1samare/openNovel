@@ -833,7 +833,13 @@ button:disabled {
 
   .workspace-topbar {
     min-height: 64px;
+    min-width: 0;
+    overflow-x: hidden;
     padding: 0 12px;
+  }
+
+  .workspace-topbar > * {
+    min-width: 0;
   }
 
   .workspace-topbar div span {
@@ -841,6 +847,11 @@ button:disabled {
   }
 
   .workspace-topbar .secondary-link {
+    display: inline-flex;
+    min-height: 44px;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
     padding: 9px;
     font-size: 0.76rem;
   }
