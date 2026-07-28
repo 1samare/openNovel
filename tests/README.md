@@ -9,7 +9,7 @@
 - `documentation.test.mjs`：验证根目录文档与已确认的技术方向。
 - `electron-foundation.test.mjs`：验证 Electron 安全边界和构建配置。
 - `renderer-shell.test.mjs`：验证工作台路由和渲染入口的安全策略。
-- `readme-contract.test.mjs`：验证 README 目录契约检查器的 Git 变更行为。
+- `readme-contract.test.mjs`：验证 README 目录契约检查器的祖先目录、精确必需章节、本地 Git 变更、基准分支和 push 干净检出行为。
 
 ## 依赖边界
 
@@ -22,3 +22,4 @@
 ## 变更同步
 
 - 2026-07-28：新增 README 目录契约行为测试。
+- 2026-07-28：补充祖先目录、精确标题和 push 基准回归测试。

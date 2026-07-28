@@ -40,6 +40,28 @@
 - [x] Run focused tests, `npm run check:readmes`, full tests and typecheck.
 - [x] Commit as `chore: enforce directory readme contracts`.
 
+### Task 1 Fix Round 1：README 检查器审查修复
+
+**修改目标：** 修复 README 检查器对嵌套祖先目录、push 基准差异和 README 必需章节的遗漏。
+
+**范围与明确不包含的内容：** 仅修改 README 检查器、其行为测试、Windows 质量工作流和受影响目录 README；不修改应用运行时代码、不增加依赖、不推送远端。
+
+**涉及文件：**
+- Modify: `scripts/check-readmes.mjs`, `scripts/README.md`, `tests/readme-contract.test.mjs`, `tests/README.md`
+- Modify: `.github/workflows/quality.yml`, `.github/workflows/README.md`
+- Modify: `docs/2026-07-28/Harness Agent离线闭环实现计划.md`, `docs/2026-07-28/README.md`
+
+**实施步骤：**
+- [x] 先为祖先目录、push 事件前 SHA 和缺少必需章节的 README 添加失败行为测试。
+- [x] 运行聚焦测试，记录检查器未覆盖三类场景的 RED 结果。
+- [x] 使用每个维护文件的全部祖先目录扩展检查范围，验证 README 的五个精确章节，并支持 `GITHUB_EVENT_BEFORE` 作为 push 基准。
+- [x] 在工作流的 README 检查步骤注入 push 的 `github.event.before`，保持 PR 使用 `GITHUB_BASE_REF`。
+- [x] 同步更新受影响目录 README 和日期文档。
+- [x] 运行聚焦测试、`npm.cmd run check:readmes`、`npm.cmd test` 和 `npm.cmd run typecheck`，回填实际结果。
+- [x] 以独立本地提交保存修复。
+
+**验证方式与通过标准：** 祖先目录缺失 README、push 风格干净检出中的未同步 README 和缺少五个必需章节的 README 均使检查器失败；同步修复后通过；聚焦和全量测试、README 检查与类型检查均以退出码 0 完成。
+
 ### Task 2: Agent 公共契约、校验与状态机
 
 **Files:**
@@ -150,6 +172,12 @@
 - 为所有现有维护目录补充 README，并在 `AGENTS.md`、根 README、日期文档中记录同步规则。
 - 新增 Windows GitHub Actions 质量门禁，顺序为 `npm ci → npm run check:readmes → npm test → npm run typecheck → npm run build`。
 
+### Task 1 Fix Round 1：README 检查器审查修复
+
+- 维护目录从已跟踪文件的直接父目录扩展为全部祖先目录，并验证每份 README 的五个精确二级标题。
+- Windows 工作流将 `github.event.before` 注入 `GITHUB_EVENT_BEFORE`；PR 继续使用 GitHub 提供的 `GITHUB_BASE_REF`。
+- 新增祖先目录、缺失/非精确章节和 push 风格干净检出的回归测试。
+
 ## 验证结果
 
 ### Task 1：README 目录契约、项目规则与 CI 基础
@@ -160,3 +188,12 @@
 - `npm.cmd test`：12/12 通过。
 - `npm.cmd run typecheck`：Node 与 Web 类型检查通过。
 - PowerShell 执行策略禁止 `npm.ps1`，因此验证使用等效的 `npm.cmd`；项目脚本与 CI 命令未作替换。
+
+### Task 1 Fix Round 1：README 检查器审查修复
+
+- RED：新增祖先目录、缺失章节和 push 事件前 SHA 用例后，`node --test tests/readme-contract.test.mjs` 以 7 个用例中的 3 个失败结束；三个失败均为检查器返回 `0 !== 1`，直接对应审查发现。
+- RED（精确标题）：新增带附加文本的标题用例后，同一命令以 8 个用例中的 1 个失败结束，确认原实现只是前缀匹配。
+- GREEN：收紧实现后，`node --test tests/readme-contract.test.mjs` 通过 8/8。
+- `npm.cmd run check:readmes`：通过。
+- `npm.cmd test`：16/16 通过。
+- `npm.cmd run typecheck`：Node 与 Web 类型检查通过。

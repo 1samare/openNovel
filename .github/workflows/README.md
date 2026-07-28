@@ -6,7 +6,7 @@
 
 ## 内容说明
 
-- `quality.yml`：在 Windows 环境执行依赖安装、README 契约、测试、类型检查和构建。
+- `quality.yml`：在 Windows 环境执行依赖安装、README 契约、测试、类型检查和构建；PR 使用基础分支，push 使用事件前 SHA 比较 README 同步变更。
 
 ## 依赖边界
 
@@ -19,3 +19,4 @@
 ## 变更同步
 
 - 2026-07-28：新增 Windows 质量检查工作流。
+- 2026-07-28：为 push 注入事件前 SHA，避免干净检出遗漏 README 同步检查。

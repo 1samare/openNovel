@@ -23,3 +23,5 @@
 - 2026-07-28：补充安全桥实现对既有 Preload 安全测试的迁移要求。
 - 2026-07-28：记录 Task 1 的 README 目录契约、项目规则与 CI 基础。
 - 2026-07-28：回填 Task 1 的 RED/GREEN、README 检查、全量测试和类型检查结果。
+- 2026-07-28：记录 Task 1 Fix Round 1 对祖先目录、push 基准和 README 必需章节的修复。
+- 2026-07-28：回填 Task 1 Fix Round 1 的 RED/GREEN 与全量质量检查结果。
