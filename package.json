@@ -1,0 +1,36 @@
+{
+  "name": "open-novel",
+  "version": "0.1.0",
+  "private": true,
+  "description": "本地优先的小说 AI 辅助写作桌面应用",
+  "config": {
+    "electron_mirror": "https://npmmirror.com/mirrors/electron/"
+  },
+  "main": "./out/main/index.js",
+  "scripts": {
+    "postinstall": "install-electron",
+    "dev": "electron-vite dev",
+    "start": "electron-vite preview",
+    "build": "npm run typecheck && electron-vite build",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
+    "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "dependencies": {
+    "vue": "^3.5.40",
+    "vue-router": "^5.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "electron": "^43.1.1",
+    "electron-vite": "^5.0.0",
+    "typescript": "^6.0.3",
+    "vite": "^7.3.6",
+    "vue-tsc": "^3.3.7"
+  }
+}
