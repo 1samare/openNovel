@@ -23,14 +23,15 @@ export const transitionRun = (
       ok: false,
       error: {
         code: 'INVALID_STATE',
-        message: `Cannot transition from ${run.status} to ${status}`
+        message: `Cannot transition from ${run.status} to ${status}`,
+        retryable: false
       }
     }
   }
 
   return {
     ok: true,
-    value: {
+    data: {
       ...run,
       status,
       updatedAt

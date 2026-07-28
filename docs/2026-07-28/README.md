@@ -34,3 +34,5 @@
 - 2026-07-28：登记 Task 3 Fix Round 1 的快照 envelope 严格校验与替换失败保护计划。
 - 2026-07-28：回填 Task 3 Fix Round 1 的严格 envelope 与替换失败保护实现结果。
 - 2026-07-28：回填 Task 3 Fix Round 1 的 RED/GREEN 与全量质量验证结果。
+- 2026-07-28：登记 Task 2 Fix Round 2，纠正错误码、事件、结果分支和检查点与已批准 Public Contracts 的偏差。
+- 2026-07-28：同步 Task 2 Fix Round 2 的公共契约迁移、TDD RED/GREEN 和质量验证记录。

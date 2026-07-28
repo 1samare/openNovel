@@ -16,19 +16,28 @@ const createRun = (overrides = {}) => ({
   updatedAt: createdAt,
   events: [
     {
+      runId: 'run-1',
       sequence: 1,
-      type: 'status_changed',
-      at: createdAt,
-      status: 'queued'
+      type: 'run.created',
+      timestamp: createdAt,
+      payload: {}
     },
     {
+      runId: 'run-1',
       sequence: 2,
-      type: 'chunk',
-      at: '2026-07-28T09:01:00.000Z',
-      phase: 'analysis',
-      text: 'A storm gathers.'
+      type: 'step.delta',
+      timestamp: '2026-07-28T09:01:00.000Z',
+      payload: { phase: 'analysis', text: 'A storm gathers.' }
     }
   ],
+  output: {
+    analysis: 'A storm gathers.',
+    final: ''
+  },
+  checkpoint: {
+    phase: 'analysis',
+    nextChunkIndex: 1
+  },
   ...overrides
 })
 
@@ -43,7 +52,7 @@ test('saves the first run with the version 1 JSON envelope', async (t) => {
   const repository = new JsonRunRepository(storageRoot)
   const run = createRun()
 
-  assert.deepEqual(await repository.save(run), { ok: true, value: undefined })
+  assert.deepEqual(await repository.save(run), { ok: true, data: undefined })
 
   const persisted = JSON.parse(await readFile(join(storageRoot, 'run-1.json'), 'utf8'))
   assert.deepEqual(persisted, { schemaVersion: 1, run })
@@ -56,14 +65,21 @@ test('replaces a saved run and reloads it from a new repository instance', async
   const replacement = createRun({
     status: 'completed',
     updatedAt: '2026-07-28T09:02:00.000Z',
-    result: 'Opening drafted.'
+    output: {
+      analysis: 'A storm gathers.',
+      final: 'Opening drafted.'
+    },
+    checkpoint: {
+      phase: 'final',
+      nextChunkIndex: 0
+    }
   })
 
   await repository.save(original)
-  assert.deepEqual(await repository.save(replacement), { ok: true, value: undefined })
+  assert.deepEqual(await repository.save(replacement), { ok: true, data: undefined })
 
   const reloaded = new JsonRunRepository(storageRoot)
-  assert.deepEqual(await reloaded.get('run-1'), { ok: true, value: replacement })
+  assert.deepEqual(await reloaded.get('run-1'), { ok: true, data: replacement })
 })
 
 test('filters persisted events strictly after the requested sequence', async (t) => {
@@ -73,9 +89,11 @@ test('filters persisted events strictly after the requested sequence', async (t)
     events: [
       ...createRun().events,
       {
+        runId: 'run-1',
         sequence: 3,
-        type: 'approval_requested',
-        at: '2026-07-28T09:02:00.000Z'
+        type: 'approval.requested',
+        timestamp: '2026-07-28T09:02:00.000Z',
+        payload: {}
       }
     ]
   })
@@ -84,7 +102,7 @@ test('filters persisted events strictly after the requested sequence', async (t)
 
   assert.deepEqual(await repository.getEvents('run-1', 1), {
     ok: true,
-    value: run.events.slice(1)
+    data: run.events.slice(1)
   })
 })
 
@@ -142,7 +160,11 @@ test('rejects an envelope with extra top-level keys through get and list', async
 
   assert.deepEqual(await repository.get('extra-envelope'), {
     ok: false,
-    error: { code: 'INVALID_RUN', message: 'Run snapshot failed validation' }
+    error: {
+      code: 'VALIDATION_ERROR',
+      message: 'Run snapshot failed validation',
+      retryable: false
+    }
   })
   assert.deepEqual(await repository.list(), {
     runs: [],
@@ -162,7 +184,11 @@ test('rejects an invalid run without replacing the existing snapshot', async (t)
 
   assert.deepEqual(result, {
     ok: false,
-    error: { code: 'INVALID_RUN', message: 'Run snapshot failed validation' }
+    error: {
+      code: 'VALIDATION_ERROR',
+      message: 'Run snapshot failed validation',
+      retryable: false
+    }
   })
   assert.deepEqual(JSON.parse(await readFile(join(storageRoot, 'run-1.json'), 'utf8')), {
     schemaVersion: 1,
@@ -185,8 +211,12 @@ test('preserves a repository-managed snapshot when replacement fails', async (t)
 
   assert.deepEqual(result, {
     ok: false,
-    error: { code: 'EXECUTION_FAILED', message: 'Unable to save run snapshot' }
+    error: {
+      code: 'PERSISTENCE_FAILED',
+      message: 'Unable to save run snapshot',
+      retryable: true
+    }
   })
   assert.deepEqual(await readFile(snapshotPath), originalBytes)
-  assert.deepEqual(await repository.get('run-1'), { ok: true, value: original })
+  assert.deepEqual(await repository.get('run-1'), { ok: true, data: original })
 })

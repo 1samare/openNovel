@@ -10,8 +10,8 @@
 - `electron-foundation.test.mjs`：验证 Electron 安全边界和构建配置。
 - `renderer-shell.test.mjs`：验证工作台路由和渲染入口的安全策略。
 - `readme-contract.test.mjs`：验证 README 目录契约检查器的祖先目录、精确必需章节、本地 Git 变更、基准分支和 push 干净检出行为。
-- `agent-state-machine.test.mjs`：验证 Agent Run 的生命周期、取消、失败、安全错误规范化、重复审批、终态保护和 Prompt 校验。
-- `agent-repository.test.mjs`：使用真实临时目录验证 JSON Run 快照的原子保存、重载、事件筛选、严格 envelope 诊断，以及替换失败时保留目标快照。
+- `agent-state-machine.test.mjs`：验证 Agent Run 的生命周期、取消、失败、安全错误规范化、十二种公共事件、严格错误/结果形态、输出/检查点、重复审批、终态保护和 Prompt 校验。
+- `agent-repository.test.mjs`：使用真实临时目录验证迁移后公共契约下的 JSON Run 快照原子保存、重载、事件筛选、严格 envelope 诊断，以及替换失败时保留目标快照。
 
 ## 依赖边界
 
@@ -29,3 +29,4 @@
 - 2026-07-28：补充带合法错误码的 Error 不保留堆栈或扩展字段的回归测试。
 - 2026-07-28：新增 JSON Run Repository 的真实文件系统集成测试。
 - 2026-07-28：新增顶级 envelope 键严格校验和替换阶段失败保留快照的回归测试。
+- 2026-07-28：将 Agent 状态机与 Repository 用例迁移到已批准的错误、事件、`data`、输出和检查点公共契约。

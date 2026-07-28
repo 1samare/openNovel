@@ -42,7 +42,7 @@ const runIdFromFileName = (fileName: string): string =>
 
 const invalidRun = (message: string): AgentResult<never> => ({
   ok: false,
-  error: { code: 'INVALID_RUN', message }
+  error: { code: 'VALIDATION_ERROR', message, retryable: false }
 })
 
 const parseSnapshot = (value: unknown): AgentRun => {
@@ -107,12 +107,16 @@ export class JsonRunRepository implements RunRepository {
       await mkdir(this.storageRoot, { recursive: true })
       await writeFile(temporaryPath, JSON.stringify({ schemaVersion, run } satisfies RunSnapshot), 'utf8')
       await this.replaceSnapshot(temporaryPath, snapshotPath)
-      return { ok: true, value: undefined }
+      return { ok: true, data: undefined }
     } catch {
       await rm(temporaryPath, { force: true }).catch(() => undefined)
       return {
         ok: false,
-        error: { code: 'EXECUTION_FAILED', message: 'Unable to save run snapshot' }
+        error: {
+          code: 'PERSISTENCE_FAILED',
+          message: 'Unable to save run snapshot',
+          retryable: true
+        }
       }
     }
   }
@@ -121,10 +125,10 @@ export class JsonRunRepository implements RunRepository {
     const snapshotPath = join(this.storageRoot, snapshotFileName(id))
 
     try {
-      return { ok: true, value: await loadSnapshot(snapshotPath) }
+      return { ok: true, data: await loadSnapshot(snapshotPath) }
     } catch (error) {
       if (isRecord(error) && error.code === 'ENOENT') {
-        return { ok: true, value: undefined }
+        return { ok: true, data: undefined }
       }
 
       if (error instanceof SyntaxError) {
@@ -141,7 +145,11 @@ export class JsonRunRepository implements RunRepository {
 
       return {
         ok: false,
-        error: { code: 'EXECUTION_FAILED', message: 'Unable to load run snapshot' }
+        error: {
+          code: 'PERSISTENCE_FAILED',
+          message: 'Unable to load run snapshot',
+          retryable: true
+        }
       }
     }
   }
@@ -190,7 +198,7 @@ export class JsonRunRepository implements RunRepository {
 
     return {
       ok: true,
-      value: loaded.value?.events.filter((event) => event.sequence > afterSequence) ?? []
+      data: loaded.data?.events.filter((event) => event.sequence > afterSequence) ?? []
     }
   }
 }

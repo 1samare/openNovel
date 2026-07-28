@@ -99,6 +99,28 @@
 
 **验证方式与通过标准：** 规范化结果与原始 Error 不是同一实例，且不含 `stack`、扩展字段；聚焦测试、README 检查、全量测试和类型检查均以退出码 0 通过。
 
+### Task 2 Fix Round 2：恢复已批准的公共契约
+
+**修改目标：** 修复 Task 2 实现与用户已批准 Public Contracts 的结构性偏差，避免错误的事件、错误码和结果形态继续扩散到 Orchestrator、IPC 与 UI。
+
+**修改范围与明确不包含的内容：** 将共享契约严格恢复为 `AgentError` 六种错误码及 `retryable`、带 `runId/sequence/type/timestamp/payload` 的十二种事件、`AgentResult<T>` 的 `data` 分支，并为 `AgentRun` 补齐输出和 `{ phase, nextChunkIndex }` 检查点；同步迁移状态机、校验、Repository 及既有测试。此轮不实现 Executor、Orchestrator、Electron IPC 或 UI。
+
+**涉及的文件：**
+- Modify: `src/shared/agent.ts`, `src/agent/errors.ts`, `src/agent/validation.ts`, `src/agent/state-machine.ts`, `src/agent/repository.ts`
+- Modify: `tests/agent-state-machine.test.mjs`, `tests/agent-repository.test.mjs`
+- Modify: `src/shared/README.md`, `src/agent/README.md`, `tests/README.md`
+- Modify: this implementation plan, `docs/2026-07-28/README.md`
+
+**实施步骤：**
+- [x] 先加入精确契约和快照形态回归测试，并确认现有实现失败。
+- [x] 恢复批准的错误码、`retryable`、事件名称/公共字段和 `AgentResult.data`。
+- [x] 定义包含分阶段输出与恢复检查点的 `AgentRun`，更新运行时守卫和状态转换。
+- [x] 将 Repository 与既有测试迁移到新契约，不改变原子持久化行为。
+- [x] 同步更新受影响目录 README，运行聚焦测试、全量测试、README 契约和类型检查。
+- [x] 以独立本地提交保存修复，并重新执行规格与代码质量审查。
+
+**验证方式与通过标准：** 类型和运行时测试精确覆盖用户给出的 Public Contracts；非法旧事件名、旧错误码、缺少 `retryable`、`value` 成功分支和缺少检查点的快照均被拒绝；Repository 既有耐久性用例无回归，全部质量门禁退出码为 0。
+
 ### Task 3: JSON Run Repository 与恢复检查点
 
 **Files:**
@@ -245,3 +267,10 @@
 - RED：`node --experimental-strip-types --test tests/agent-state-machine.test.mjs` 以 7 个用例中的 1 个失败结束；带合法 `INVALID_STATE` code 的 Error 与转换结果引用相同，错误为 `Expected "actual" not to be reference-equal to "expected"`。
 - GREEN：转换函数改为新建 `{ code, message }` 后，同一聚焦命令通过 7/7，回归断言确认不含 `stack` 和 `extra` 字段。
 - `npm.cmd run check:readmes`：通过；`npm.cmd test`：23/23 通过；`npm.cmd run typecheck`：Node 与 Web 类型检查通过。
+
+### Task 2 Fix Round 2：恢复已批准的公共契约
+
+- RED：先将状态机和仓储测试迁移到十二种事件、六种错误码、`retryable`、`data`、输出和检查点形态。`node --experimental-strip-types --test tests/agent-state-machine.test.mjs tests/agent-repository.test.mjs` 以退出码 1 失败：状态机测试因缺少 `isAgentResult` 导出无法加载；仓储测试将新快照拒绝为 `INVALID_RUN`，并继续返回旧 `value` 分支和旧错误码。
+- 实际实现：公共类型现限定六种错误码和 `retryable`，事件统一为五个公共字段及十二种命名；`AgentRun` 以 `{ analysis, final }` 输出和 `{ phase, nextChunkIndex }` 检查点持久化；`AgentResult<T>` 成功分支改为 `data`。运行时守卫拒绝旧事件、旧错误码、缺失 `retryable`、`value` 分支、缺失或无效输出/检查点；状态机与 JSON Repository 已迁移。Repository 保持 schemaVersion 1 envelope、临时写入/重命名、替换失败保护及原有安全诊断，公开失败分别映射为 `VALIDATION_ERROR` 或 `PERSISTENCE_FAILED`。
+- 复审修正：规格/质量复审发现 `AgentRun` 守卫仍可接受遗留 `result` 额外字段，且替换用例仍在构造该字段。新增断言后，聚焦测试按预期以 `true !== false` 失败；守卫现仅接受批准的 Run 字段（及可选 `error`），替换用例改为 `output.final`，同一聚焦命令随后通过 17/17。当前环境没有可派发的独立审查代理，因此此项为本地逐项规格与差异复审。
+- 验证：最终 `node --experimental-strip-types --test tests/agent-state-machine.test.mjs tests/agent-repository.test.mjs` 通过 17/17；`npm.cmd run check:readmes` 通过；`npm.cmd test` 通过 33/33；`npm.cmd run typecheck` 的 Node 与 Web 检查均通过；`git diff --check` 未报告空白错误。

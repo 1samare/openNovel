@@ -8,42 +8,58 @@ export type RunStatus =
   | 'interrupted'
 
 export type AgentErrorCode =
-  | 'INVALID_PROMPT'
+  | 'VALIDATION_ERROR'
+  | 'RUN_NOT_FOUND'
   | 'INVALID_STATE'
-  | 'INVALID_RUN'
+  | 'PERSISTENCE_FAILED'
   | 'EXECUTION_FAILED'
-  | 'UNEXPECTED_ERROR'
+  | 'IPC_FORBIDDEN'
 
 export type AgentError = {
   code: AgentErrorCode
   message: string
+  retryable: boolean
 }
 
-export type AgentEvent =
-  | {
-      sequence: number
-      type: 'status_changed'
-      at: string
-      status: RunStatus
-    }
-  | {
-      sequence: number
-      type: 'chunk'
-      at: string
-      phase: 'analysis' | 'final'
-      text: string
-    }
-  | {
-      sequence: number
-      type: 'approval_requested'
-      at: string
-    }
-  | {
-      sequence: number
-      type: 'failed'
-      at: string
-      error: AgentError
-    }
+export type JsonValue =
+  | boolean
+  | null
+  | number
+  | string
+  | JsonValue[]
+  | { [key: string]: JsonValue }
+
+export type AgentEventType =
+  | 'run.created'
+  | 'run.started'
+  | 'run.interrupted'
+  | 'run.resumed'
+  | 'run.completed'
+  | 'run.cancelled'
+  | 'run.failed'
+  | 'step.started'
+  | 'step.delta'
+  | 'step.completed'
+  | 'approval.requested'
+  | 'approval.resolved'
+
+export type AgentEvent = {
+  runId: string
+  sequence: number
+  type: AgentEventType
+  timestamp: string
+  payload: { [key: string]: JsonValue }
+}
+
+export type AgentOutput = {
+  analysis: string
+  final: string
+}
+
+export type AgentCheckpoint = {
+  phase: 'analysis' | 'final'
+  nextChunkIndex: number
+}
 
 export type AgentRun = {
   id: string
@@ -52,14 +68,15 @@ export type AgentRun = {
   createdAt: string
   updatedAt: string
   events: AgentEvent[]
-  result?: string
+  output: AgentOutput
+  checkpoint: AgentCheckpoint
   error?: AgentError
 }
 
 export type AgentResult<T> =
   | {
       ok: true
-      value: T
+      data: T
     }
   | {
       ok: false
