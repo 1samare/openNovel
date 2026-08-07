@@ -19,7 +19,7 @@
 | 阶段 | 交付主题 | 状态 | 当前工作区/分支 | 最近结果 | 下一入口 |
 |---|---|---|---|---|---|
 | 设计基线 | 架构、BYOK、多 Agent、Skill 安全与总计划 | 已完成 | `D:\Code\codex\openNovel` / `main` | 设计文档与九阶段总计划已形成，文档测试 10/10 通过 | 阶段 0 |
-| 阶段 0 | 基线冻结与测试骨架 | 进行中 | `D:\Code\codex\openNovel` / `main`（前置收口） | 静态基线通过；生产 smoke 在 build 子进程暴露既有 `spawn EINVAL` | 按阶段计划先完成 Windows npm 子进程 TDD 修复，再提交前置变更并创建独立 worktree |
+| 阶段 0 | 基线冻结与测试骨架 | 已完成 | `D:\Code\codex\openNovel\.worktrees\phase-0-test-foundation` / `codex/phase-0-test-foundation` | 实现提交 `80e2581`；最终 `npm ci` 后 Node 90/90、UI 1/1、typecheck、README、build、smoke、acceptance 全部通过 | 创建阶段 1 当天计划并重新核对 Git 状态 |
 | 阶段 1 | 独立项目、本地数据库与项目生命周期 | 待开始 | 未分配 | 依赖阶段 0 | 阶段 0 通过后创建阶段 1 计划 |
 | 阶段 2 | 章节树、纯文本编辑器、版本与文件交换 | 待开始 | 未分配 | 依赖阶段 1 | 阶段 1 通过后创建阶段 2 计划 |
 | 阶段 3 | BYOK 密钥库、Model Gateway 与角色绑定 | 待开始 | 未分配 | 依赖阶段 2 | 阶段 2 通过后创建阶段 3 计划 |
@@ -33,15 +33,16 @@
 
 | 工作区绝对路径 | 分支 | HEAD | 状态 | 已核实事实 | 接手动作 |
 |---|---|---|---|---|---|
-| `D:\Code\codex\openNovel` | `main` | `31ca681` | 进行中 | 用户已批准修复、验证并分别提交进度治理与 Electron smoke/CI 前置变更；阶段 0 计划已建立，现先处理真实 smoke 的 Windows `spawn EINVAL` | 在 `tests/electron-smoke.test.mjs` 写 Windows npm CLI 调用回归测试并确认 RED |
+| `D:\Code\codex\openNovel` | `main` | `f68b4f0` | 已完成 | 设计、进度治理、Electron smoke/CI 和阶段 0 计划已在提交 `f68b4f0` 收口；仅保留未跟踪 `.superpowers/`，不属于阶段 0 | 保留主工作区，不在此继续阶段 0 实施 |
 | `D:\Code\codex\openNovel\.worktrees\harness-agent-loop` | `feat/harness-agent-loop` | `31ca681` | 需核实 | 已核对到仅有未跟踪 `.superpowers/`；未检测到相对 `main` 的已提交差异 | 使用该 worktree 前先确认任务所有者和是否仍需保留 |
+| `D:\Code\codex\openNovel\.worktrees\phase-0-test-foundation` | `codex/phase-0-test-foundation` | `80e2581`（阶段 0 实现） | 已完成 | 最终锁文件可由 `npm.cmd ci` 重建；Node 90/90、UI 1/1 与全部退出门禁通过；`src/` 无差异 | 开始阶段 1 前创建当天计划并重新核对全部 worktree |
 
 ## 活动任务
 
 | 任务 | 阶段 | 状态 | 工作区/分支 | 修改计划 | 最近验证 | 下一步 | 更新时间 |
 |---|---|---|---|---|---|---|---|
 | 开发进度清单与阶段入口约束 | 开发治理 | 已完成 | `D:\Code\codex\openNovel` / `main` | `docs/2026-08-07/开发进度清单与阶段入口约束计划.md` | README 契约通过；文档测试 10/10；Git 空白检查通过 | 阶段 0 开工前先隔离遗留修改，并创建含开工记录的阶段计划 | 2026-08-07 |
-| 阶段 0 基线冻结与测试骨架 | 阶段 0 | 进行中 | `D:\Code\codex\openNovel` / `main`（前置收口） | `docs/2026-08-07/阶段0基线冻结与测试骨架计划.md` | smoke RED 6/7、GREEN 7/7；Node 90/90；README、typecheck、build、真实 smoke 全通过 | 核对差异并提交已获授权的前置变更，再创建 `codex/phase-0-test-foundation` | 2026-08-07 |
+| 阶段 0 基线冻结与测试骨架 | 阶段 0 | 已完成 | `D:\Code\codex\openNovel\.worktrees\phase-0-test-foundation` / `codex/phase-0-test-foundation` | `docs/2026-08-07/阶段0基线冻结与测试骨架计划.md` | `npm.cmd ci` 后 Node 90/90 + UI 1/1；typecheck、README、build、smoke、acceptance、空白检查均通过；实现提交 `80e2581` | 创建阶段 1 当天计划，读取本清单并重新核对 Git/worktree 状态 | 2026-08-07 |
 
 ## 遗留变更与风险
 
@@ -49,8 +50,20 @@
 - `docs/2026-08-06/`、`docs/2026-08-07/` 是多 Agent 小说助手设计、总计划和进度治理文档；提交时必须与上述 Electron smoke/CI 变更分开核对范围。
 - 两个 worktree 当前 HEAD 相同，不能据此推断 `feat/harness-agent-loop` 已合并、已完成或可以删除。
 - 用户已批准在 `main` 上完成现有前置变更的修复、验证和分范围提交；该授权不包含修改或删除 `feat/harness-agent-loop` worktree，也不包含推送远端。
+- 前置变更最终以单一提交 `f68b4f0` 收口，避免共享 README 在分拆提交之间出现不一致；阶段 0 后续变更仅归属 `codex/phase-0-test-foundation` worktree。
 
 ## 最近交接
+
+### 2026-08-07：阶段 0 完成
+
+- 工作区：`D:\Code\codex\openNovel\.worktrees\phase-0-test-foundation`
+- 分支与实现提交：`codex/phase-0-test-foundation` / `80e2581`
+- 当前状态：已完成
+- 已完成：从 `f68b4f0` 创建隔离 worktree；增加 Vitest、Vue Test Utils、happy-dom、UI 测试夹具和分层 npm 脚本；实现已提交为 `80e2581 test: establish phase zero test foundation`，且未修改 `src/` 产品代码。
+- 最近验证：最终 `npm.cmd ci` 成功安装 217 个包；`npm.cmd run check:readmes`、`npm.cmd run typecheck`、`npm.cmd test`（Node 90/90 + UI 1/1）、`npm.cmd run build`、`npm.cmd run test:electron-smoke`、`npm.cmd run test:acceptance` 和 Git 空白检查全部退出 0。
+- 未提交变更：完成状态回填时仅有本交接记录、阶段计划和同目录 README，全部归属阶段 0 完成文档；产品与测试实现已在 `80e2581` 提交。
+- 下一步：开始阶段 1 前创建执行当天的 `docs/YYYY-MM-DD/*计划.md`，重新读取本清单，并核对工作区、分支、HEAD、并行 worktree 和 Git 状态。
+- 阻塞项：无。
 
 ### 2026-08-07：阶段 0 开工与前置审计
 

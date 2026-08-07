@@ -47,6 +47,8 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 
 - 2026-08-07：增加 Vitest、Vue Test Utils 与 happy-dom 组件测试入口，并将 Node、UI、Electron smoke 和 acceptance 脚本分层。
 
+- 2026-08-07：阶段 0 测试骨架以实现提交 `80e2581` 收口，最终锁文件重建与全部退出门禁通过，进度清单已指向阶段 1 计划入口。
+
 ## 技术栈
 
 - Electron

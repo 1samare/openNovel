@@ -27,3 +27,7 @@
 - 2026-08-07：新增根级开发进度清单并将阶段任务读取、登记和交接要求写入项目协作约束。
 - 2026-08-07：完成 README、文档测试、空白和规则唯一性验证，并回填进度治理结果。
 - 2026-08-07：创建阶段 0 基线冻结与测试骨架实施计划，登记工作区、分支、基线、既有修改、基线失败和 TDD 验收路径。
+- 2026-08-07：记录阶段 0 前置提交和 `codex/phase-0-test-foundation` 独立 worktree 切换结果。
+- 2026-08-07：记录阶段 0 独立 worktree 的 Node、类型、README、生产构建和真实 Electron smoke 干净基线全部通过。
+- 2026-08-07：记录 Vitest/Vue Test Utils/happy-dom 依赖准入、UI RED→GREEN、统一脚本和阶段 0 待验证状态。
+- 2026-08-07：回填最终 `npm ci`、Node 90/90、UI 1/1、类型、README、构建、Electron smoke、acceptance 与空白检查结果，阶段 0 标记为已完成。
