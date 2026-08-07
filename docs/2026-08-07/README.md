@@ -33,3 +33,4 @@
 - 2026-08-07：记录 Vitest/Vue Test Utils/happy-dom 依赖准入、UI RED→GREEN、统一脚本和阶段 0 待验证状态。
 - 2026-08-07：回填最终 `npm ci`、Node 90/90、UI 1/1、类型、README、构建、Electron smoke、acceptance 与空白检查结果，阶段 0 标记为已完成。
 - 2026-08-07：创建后续阶段统一分支与确认后推送约束计划，并记录 `feat/v1.0@0736181` 的分支切换基线。
+- 2026-08-07：记录治理提交 `a548a23`、`origin/feat/v1.0` upstream 和本地/远端 0 ahead/0 behind，统一分支约束完成。

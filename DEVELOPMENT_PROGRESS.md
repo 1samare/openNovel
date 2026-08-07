@@ -24,7 +24,7 @@
 |---|---|---|---|---|---|
 | 设计基线 | 架构、BYOK、多 Agent、Skill 安全与总计划 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | 设计文档与九阶段总计划已形成，文档测试 10/10 通过 | 阶段 0 |
 | 阶段 0 | 基线冻结与测试骨架 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | 阶段 0 完整成果已进入 `feat/v1.0@0736181`；最终门禁全部通过 | 创建阶段 1 当天计划并核对 `origin/feat/v1.0` |
-| 阶段 1 | 独立项目、本地数据库与项目生命周期 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 0，统一分支治理正在收口 | 治理任务推送后创建阶段 1 计划 |
+| 阶段 1 | 独立项目、本地数据库与项目生命周期 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 0；统一分支治理已推送到 `origin/feat/v1.0` | 创建阶段 1 当天计划并重新核对 Git 状态 |
 | 阶段 2 | 章节树、纯文本编辑器、版本与文件交换 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 1 | 阶段 1 通过并推送后创建阶段 2 计划 |
 | 阶段 3 | BYOK 密钥库、Model Gateway 与角色绑定 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 2 | 阶段 2 通过并推送后创建阶段 3 计划 |
 | 阶段 4 | 小说圣经与结构化共创 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 3 | 阶段 3 通过并推送后创建阶段 4 计划 |
@@ -37,7 +37,7 @@
 
 | 工作区绝对路径 | 分支 | HEAD | 状态 | 已核实事实 | 接手动作 |
 |---|---|---|---|---|---|
-| `D:\Code\codex\openNovel` | `feat/v1.0` | `0736181` + 本治理任务工作树 | 待验证 | 已从阶段 0 最新提交创建长期分支；README、Node 90/90、UI 1/1 与空白检查通过；仅保留本任务文件和用户原有 `.superpowers/` | 提交治理规则并首次推送 `origin/feat/v1.0` |
+| `D:\Code\codex\openNovel` | `feat/v1.0` | `HEAD`（治理规则提交 `a548a23`） | 已完成 | 已从阶段 0 最新提交创建长期分支并建立 `origin/feat/v1.0` upstream；本地与远端 0 ahead/0 behind | 创建阶段 1 当天计划并按新规则开工 |
 | `D:\Code\codex\openNovel\.worktrees\harness-agent-loop` | `feat/harness-agent-loop` | `31ca681` | 需核实 | 已核对到仅有未跟踪 `.superpowers/`；未检测到相对 `main` 的已提交差异 | 使用该 worktree 前先确认任务所有者和是否仍需保留 |
 | `D:\Code\codex\openNovel\.worktrees\phase-0-test-foundation` | `codex/phase-0-test-foundation` | `0736181` | 已完成 | 阶段 0 代码与交接已进入 `feat/v1.0`；该历史 worktree 不再作为阶段入口 | 保留记录，未经用户授权不删除、修改或复用 |
 
@@ -47,26 +47,26 @@
 |---|---|---|---|---|---|---|---|
 | 开发进度清单与阶段入口约束 | 开发治理 | 已完成 | `D:\Code\codex\openNovel` / `main` | `docs/2026-08-07/开发进度清单与阶段入口约束计划.md` | README 契约通过；文档测试 10/10；Git 空白检查通过 | 阶段 0 开工前先隔离遗留修改，并创建含开工记录的阶段计划 | 2026-08-07 |
 | 阶段 0 基线冻结与测试骨架 | 阶段 0 | 已完成 | `D:\Code\codex\openNovel\.worktrees\phase-0-test-foundation` / `codex/phase-0-test-foundation` | `docs/2026-08-07/阶段0基线冻结与测试骨架计划.md` | `npm.cmd ci` 后 Node 90/90 + UI 1/1；typecheck、README、build、smoke、acceptance、空白检查均通过；实现提交 `80e2581` | 创建阶段 1 当天计划，读取本清单并重新核对 Git/worktree 状态 | 2026-08-07 |
-| 后续阶段统一分支与确认后推送约束 | 开发治理 | 待验证 | `D:\Code\codex\openNovel` / `feat/v1.0` | `docs/2026-08-07/后续阶段统一分支与确认后推送约束计划.md` | `npm.cmd ci`、README、Node 90/90、UI 1/1、空白检查通过；沙箱外聚合测试退出 0 | 提交并首次推送 `origin/feat/v1.0`，再回填 upstream 结果 | 2026-08-07 |
+| 后续阶段统一分支与确认后推送约束 | 开发治理 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | `docs/2026-08-07/后续阶段统一分支与确认后推送约束计划.md` | 治理提交 `a548a23` 已推送；upstream 正确且 0 ahead/0 behind；README、Node 90/90、UI 1/1、空白检查通过 | 创建阶段 1 当天计划并按 `feat/v1.0` 单工作区规则开工 | 2026-08-07 |
 
 ## 遗留变更与风险
 
 - 根工作区和 `harness-agent-loop` worktree 各有未跟踪 `.superpowers/`；均属于用户既有内容，阶段任务不得读取、修改、清理或暂存。
 - `harness-agent-loop` 与 `phase-0-test-foundation` 是历史 worktree；后续阶段不得复用，且未经用户明确授权不得删除或修改。
 - `main@f68b4f0` 与 `origin/main@31ca681` 均不包含完整阶段 0 成果；阶段 1–8 不得从 `main` 开工或向 `main` 推送。
-- `feat/v1.0` 在本治理任务首次推送前没有 upstream；必须在提交和验证完成后使用 `git push -u origin feat/v1.0` 建立。
+- `feat/v1.0` 已建立 `origin/feat/v1.0` upstream；后续阶段只允许在用户确认完成后做普通快进推送。
 
 ## 最近交接
 
-### 2026-08-07：后续阶段统一分支治理开工
+### 2026-08-07：后续阶段统一分支治理完成
 
 - 工作区：`D:\Code\codex\openNovel`
 - 分支与基线：`feat/v1.0` / `0736181`
-- 当前状态：待验证
-- 已完成：fetch 远端并确认无同名分支；从阶段 0 最新成果创建并切换 `feat/v1.0`；建立统一分支与确认后推送实施计划。
-- 最近验证：`npm.cmd ci` 成功安装 217 个包；`npm.cmd run check:readmes` 通过；沙箱外 `npm.cmd test` 为 Node 90/90、UI 1/1；`git diff --check` 与阶段 0 祖先检查退出 0。沙箱内聚合测试的 Vitest fork worker 曾超时，但 `test:ui` 单独连续通过，且相同聚合命令在沙箱外退出 0，未修改测试配置。
-- 未提交变更：`AGENTS.md`、本进度清单、根 README、当天计划与日期 README，全部归属本治理任务；`.superpowers/` 不属于本任务。
-- 下一步：核对并提交本治理任务文件，首次推送 `origin/feat/v1.0` 后回填 upstream 结果。
+- 当前状态：已完成
+- 已完成：从阶段 0 最新成果创建并切换 `feat/v1.0`；治理规则提交 `a548a23` 已推送；本地分支跟踪 `origin/feat/v1.0`，ahead/behind 为 0/0。
+- 最近验证：`npm.cmd ci` 成功安装 217 个包；`npm.cmd run check:readmes` 通过；沙箱外 `npm.cmd test` 为 Node 90/90、UI 1/1；`git diff --check` 与阶段 0 祖先检查退出 0；远端 `feat/v1.0` 指向 `a548a23`。沙箱内聚合测试的 Vitest fork worker 曾超时，但 `test:ui` 单独连续通过，且相同聚合命令在沙箱外退出 0，未修改测试配置。
+- 未提交变更：完成状态、推送结果和对应 README 的交接回填，全部归属本治理任务；用户原有 `.superpowers/` 继续保持未跟踪且不属于本任务。
+- 下一步：开始阶段 1 前创建执行当天的 `docs/YYYY-MM-DD/*计划.md`，确认根工作区仍为 `feat/v1.0`，fetch 并核对 `origin/feat/v1.0` 后登记开工。
 - 阻塞项：无。
 
 ### 2026-08-07：阶段 0 完成
