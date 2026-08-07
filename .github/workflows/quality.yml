@@ -23,3 +23,16 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build
+      - name: Production Electron smoke
+        id: electron_smoke
+        env:
+          ELECTRON_SMOKE_ARTIFACT_DIR: ${{ runner.temp }}\open-novel-electron-smoke
+        run: npm run test:electron-smoke
+      - name: Upload Electron smoke diagnostics
+        if: ${{ failure() && steps.electron_smoke.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-smoke-diagnostics
+          path: ${{ runner.temp }}\open-novel-electron-smoke
+          if-no-files-found: warn
+          retention-days: 7

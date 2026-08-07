@@ -7,10 +7,14 @@
 ## 内容说明
 
 - `check-readmes.mjs`：检查维护文件的所有祖先目录是否包含五个必需章节的 `README.md`，并确认直接变更目录同步更新 README；支持 `README_CHECK_BASE`、`GITHUB_BASE_REF` 与 push 事件前 SHA。
+- `electron-smoke.mjs`：构建并驱动隔离 `userData` 的生产 Electron，验收 Agent 闭环并生成失败诊断。
+- `electron-smoke-cdp.mjs`：使用 Node 内置 HTTP/WebSocket 实现最小 CDP 页面连接和异步调用。
+- `electron-smoke-process.mjs`：使用 Node 执行 npm CLI（Windows 缺少 CLI 路径时使用固定命令解释器回退），并管理生产构建、Electron 进程、随机端口、临时目录和 Windows 进程树清理。
+- `electron-smoke-diagnostics.mjs`：验证事件连续性与 delta 去重，并生成不含正文和路径的脱敏诊断。
 
 ## 依赖边界
 
-脚本只依赖 Node.js 内置模块和 Git 命令，不依赖 Electron、Vue 或业务代码。
+脚本只依赖 Node.js 内置模块、Git 命令和项目本地 Electron 二进制，不依赖 Vue、真实模型或网络服务。
 
 ## 维护规则
 
@@ -20,3 +24,5 @@
 
 - 2026-07-28：新增 README 目录契约检查脚本。
 - 2026-07-28：补充祖先目录、精确必需章节和 push 基准差异检查。
+- 2026-07-28：新增原生 CDP 生产 Electron 冒烟、事件断言、进程树清理和脱敏诊断脚本。
+- 2026-08-07：修复 Windows 直接启动 `npm.cmd` 的 `EINVAL`，改用可跟踪的 Node npm CLI 调用并保留固定回退。

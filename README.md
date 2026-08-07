@@ -12,6 +12,7 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 - `tests/`：架构、文档和质量契约测试。
 - `scripts/`：本地质量检查脚本。
 - `docs/`：按日期归档的设计、计划和验证记录。
+- `DEVELOPMENT_PROGRESS.md`：记录阶段进度、活动工作区、分支、验证结果和下次接手动作。
 - `.github/`：GitHub Actions 自动化配置。
 
 ## 依赖边界
@@ -33,6 +34,12 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 - 2026-07-28：登记 Harness Agent UI Fix Round 1 的异步状态、重试、可访问性和响应式加固范围。
 
 - 2026-07-28：显式将 Electron Preload 构建为沙箱兼容的 CommonJS `.cjs` 工件，并同步生产窗口连线。
+
+- 2026-08-07：登记多 Agent 小说创作助手架构与从本地项目到 Windows 安装验收的全阶段开发计划；当前代码范围不变。
+
+- 2026-08-07：增加根级开发进度清单，并要求阶段任务开始前先读取清单、核对工作区和分支。
+
+- 2026-08-07：启动阶段 0 基线冻结与测试骨架，先收口生产 Electron smoke 前置缺陷，再建立独立 Vitest Vue 组件测试入口。
 
 ## 技术栈
 
@@ -67,6 +74,7 @@ npm run check:readmes
 npm run typecheck
 npm test
 npm run build
+npm run test:electron-smoke
 ```
 
 生产构建完成后可预览构建结果：
@@ -102,6 +110,7 @@ docs/            按日期归档的设计和修改计划
 - `/workspace/chat` 的 Harness Agent 工作台：可创建 Run、查看有节奏的本地 Mock 流与时间线、审批、运行中取消、重启后恢复、本地损坏记录诊断及连续失败事件的持久化安全详情；
 - 沙箱化 CommonJS Preload、固定 Agent IPC 白名单、来源校验和不记录正文的结构化日志；
 - TypeScript 类型检查、结构测试和生产构建命令。
+- Windows 生产 Electron smoke：真实验证 Preload Agent 八 API、流式审批、运行中取消、重启恢复、事件连续性和本次进程树清理。
 
 尚未实现：
 
@@ -120,6 +129,8 @@ docs/            按日期归档的设计和修改计划
 ## 修改计划约定
 
 任何代码、配置或文档修改前，先在 `docs/YYYY-MM-DD/` 下创建对应的 `文件名称计划.md`。完整约束见 `AGENTS.md`。
+
+阶段 0–8 的开发、修复或验收开始前，还必须先读取根目录 `DEVELOPMENT_PROGRESS.md`，确认当前阶段、活动工作区、分支、遗留修改和下一步，并在阶段计划中留下开工记录。
 
 ## README 目录契约
 

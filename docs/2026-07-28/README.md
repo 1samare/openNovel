@@ -10,6 +10,7 @@
 - `Harness Agent离线闭环实现计划.md`：按 TDD 和子 Agent 审查执行的任务清单。
 - Task 6 记录：AI 对话 Harness UI、渲染层事件合并和验证结果已回填至实施计划；Fix Round 1 记录异步状态、重试、可访问性和窄屏布局加固，并补齐连续失败事件的安全详情回读与 520px 顶栏命中区。
 - Task 7 记录：全量生产验收、沙箱 Preload CommonJS 工件、生产 BrowserWindow 活动引用生命周期，以及可观察且可中止的生产 Mock 流修复计划与真实 Electron 通过标准。
+- `Electron生产冒烟自动化计划.md`：自动执行八 API、审批、取消、重启恢复、事件去重、进程树清理和 Windows CI 诊断的实施记录。
 
 ## 依赖边界
 
@@ -63,3 +64,5 @@
 - 2026-07-28：登记 Task 7 最终审查修复，关闭 Orchestrator 陈旧 list 回写、取消后步骤事件和 queued 重启停滞问题。
 - 2026-07-28：回填 Task 7 最终审查修复的三项 RED、19/19 聚焦 GREEN 与 83/83 全量验证结果。
 - 2026-07-28：记录最终规格复审与代码/安全复审均 clean，并完成 Harness Agent 离线闭环交付回填。
+- 2026-07-28：创建 Electron 生产冒烟自动化计划并登记实现范围。
+- 2026-08-07：登记阶段 0 前置审计发现的 Windows `npm.cmd` 子进程 `EINVAL`、TDD 修复范围和真实 smoke 复验标准。

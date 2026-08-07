@@ -15,10 +15,11 @@
 - `agent-orchestrator.test.mjs`：使用内存仓储和可控离线执行器验证严格事件序列、审批持久化/恢复原子边界、queued 启动恢复、legacy final checkpoint 审批证明修正、监听器快照隔离、陈旧 list 不覆盖权威状态、仓储错误与列表诊断传播、Mock Executor 的分析/final chunk 选择与进行中中止、取消竞态、事件回补及恢复检查点去重。
 - `agent-ipc.test.mjs`：验证 Agent IPC 命令参数、仅 hash 可变的完整 production file URL、开发 origin/凭据/销毁 frame sender 守卫、固定且幂等的处理器/disposer、错误脱敏、Preload 事件克隆隔离、结构化日志脱敏、恢复/窗口附着生命周期，以及 runtime 向 Mock Executor 传递受控 delay。
 - `agent-harness.test.mjs`：行为化验证渲染层先订阅后加载、加载竞态合并、序列缺口回补/去重/刷新、连续 `run.failed` 的安全详情回读与刷新重试、拒绝规范化、操作级重试、命令锁、陈旧结果隔离、队列恢复与退订，并结合控制器状态和页面契约检查可访问控件、流式 final、失败诊断和 520px 顶栏命中区。
+- `electron-smoke.test.mjs`：验证生产 smoke 的事件序列连续性、delta 去重、诊断脱敏、CDP target 选择、Windows npm CLI 调用、Electron 启动参数和进程树清理参数；不启动真实窗口。
 
 ## 依赖边界
 
-测试可读取项目文件、创建临时 Git 仓库并调用 Node.js 与 Git；不应启动应用窗口、调用网络或依赖真实 AI 服务。
+测试可读取项目文件、创建临时 Git 仓库并调用 Node.js 与 Git；常规 `npm test` 不启动应用窗口、调用网络或依赖真实 AI 服务，真实生产窗口由独立 `npm run test:electron-smoke` 负责。
 
 ## 维护规则
 
@@ -48,3 +49,5 @@
 - 2026-07-28：为生产实例短暂创建页面后自动退出补充活动 BrowserWindow 引用与关闭释放回归测试。
 - 2026-07-28：补充生产 Mock Executor 可注入延迟、入口可中止 pacing 与运行中状态可观察性回归测试。
 - 2026-07-28：补充最终审查的陈旧列表/取消提交竞态和 persisted queued 重启恢复回归测试。
+- 2026-07-28：新增 Electron 生产 smoke 的纯逻辑断言、脱敏和进程参数回归测试。
+- 2026-08-07：增加 Windows smoke 构建不得直接启动 `npm.cmd` 的回归覆盖。

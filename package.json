@@ -17,7 +17,8 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json",
     "check:readmes": "node scripts/check-readmes.mjs",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:electron-smoke": "node scripts/electron-smoke.mjs"
   },
   "engines": {
     "node": ">=22.12.0"
