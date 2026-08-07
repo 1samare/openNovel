@@ -17,8 +17,11 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "vue-tsc --noEmit -p tsconfig.web.json",
     "check:readmes": "node scripts/check-readmes.mjs",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs",
-    "test:electron-smoke": "node scripts/electron-smoke.mjs"
+    "test": "npm run test:unit && npm run test:ui",
+    "test:unit": "node --experimental-strip-types --test tests/*.test.mjs",
+    "test:ui": "vitest run",
+    "test:electron-smoke": "node scripts/electron-smoke.mjs",
+    "test:acceptance": "npm run test:electron-smoke"
   },
   "engines": {
     "node": ">=22.12.0"
@@ -30,10 +33,13 @@
   "devDependencies": {
     "@types/node": "^22.20.1",
     "@vitejs/plugin-vue": "^6.0.8",
+    "@vue/test-utils": "^2.4.11",
     "electron": "^43.1.1",
     "electron-vite": "^5.0.0",
+    "happy-dom": "^20.11.1",
     "typescript": "^6.0.3",
     "vite": "^7.3.6",
+    "vitest": "^4.1.10",
     "vue-tsc": "^3.3.7"
   }
 }

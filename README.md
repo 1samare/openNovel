@@ -41,6 +41,12 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 
 - 2026-08-07：启动阶段 0 基线冻结与测试骨架，先收口生产 Electron smoke 前置缺陷，再建立独立 Vitest Vue 组件测试入口。
 
+- 2026-08-07：阶段 0 已切换到 `codex/phase-0-test-foundation` 独立 worktree，后续测试骨架变更与主工作区隔离。
+
+- 2026-08-07：阶段 0 独立 worktree 的既有 Node、类型、README、生产构建和真实 Electron smoke 基线全部通过。
+
+- 2026-08-07：增加 Vitest、Vue Test Utils 与 happy-dom 组件测试入口，并将 Node、UI、Electron smoke 和 acceptance 脚本分层。
+
 ## 技术栈
 
 - Electron
@@ -49,6 +55,7 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 - electron-vite
 - Vue Router
 - npm
+- Vitest、Vue Test Utils 与 happy-dom（组件测试）
 
 ## 环境要求
 
@@ -73,8 +80,11 @@ npm run dev
 npm run check:readmes
 npm run typecheck
 npm test
+npm run test:unit
+npm run test:ui
 npm run build
 npm run test:electron-smoke
+npm run test:acceptance
 ```
 
 生产构建完成后可预览构建结果：

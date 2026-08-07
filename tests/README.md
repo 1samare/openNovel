@@ -16,6 +16,7 @@
 - `agent-ipc.test.mjs`：验证 Agent IPC 命令参数、仅 hash 可变的完整 production file URL、开发 origin/凭据/销毁 frame sender 守卫、固定且幂等的处理器/disposer、错误脱敏、Preload 事件克隆隔离、结构化日志脱敏、恢复/窗口附着生命周期，以及 runtime 向 Mock Executor 传递受控 delay。
 - `agent-harness.test.mjs`：行为化验证渲染层先订阅后加载、加载竞态合并、序列缺口回补/去重/刷新、连续 `run.failed` 的安全详情回读与刷新重试、拒绝规范化、操作级重试、命令锁、陈旧结果隔离、队列恢复与退订，并结合控制器状态和页面契约检查可访问控件、流式 final、失败诊断和 520px 顶栏命中区。
 - `electron-smoke.test.mjs`：验证生产 smoke 的事件序列连续性、delta 去重、诊断脱敏、CDP target 选择、Windows npm CLI 调用、Electron 启动参数和进程树清理参数；不启动真实窗口。
+- `ui/`：使用 Vitest、Vue Test Utils 和 happy-dom 执行 Vue 单文件组件测试，独立于现有 Node Test Runner 测试。
 
 ## 依赖边界
 
@@ -51,3 +52,4 @@
 - 2026-07-28：补充最终审查的陈旧列表/取消提交竞态和 persisted queued 重启恢复回归测试。
 - 2026-07-28：新增 Electron 生产 smoke 的纯逻辑断言、脱敏和进程参数回归测试。
 - 2026-08-07：增加 Windows smoke 构建不得直接启动 `npm.cmd` 的回归覆盖。
+- 2026-08-07：新增 `ui/` 组件测试目录，并保持 `tests/*.test.mjs` 继续由 Node Test Runner 执行。
