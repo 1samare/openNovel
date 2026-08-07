@@ -11,6 +11,10 @@
 5. 完成或暂停时必须留下最近验证、未提交变更归属和一条可直接执行的下一步；不得用“继续开发”等模糊描述。
 6. 多 worktree 并行时每个任务单独一行，只更新自己掌握且已经核实的记录；无法确认的事实标为 `需核实`。
 7. 清单与 Git 不一致时以 Git 和实际测试结果为准，先修正清单再继续开发。
+8. 阶段 1–8 默认只在根工作区 `D:\Code\codex\openNovel` 的 `feat/v1.0` 上实施，不为常规阶段任务新增 worktree。
+9. 每阶段开工前先 fetch 并核对本地与 `origin/feat/v1.0`；远端落后、领先或分叉情况必须如实登记和处理。
+10. 阶段完成、退出门禁通过、计划与本清单回填后，等待用户明确确认；确认后把该阶段提交推送到 `origin/feat/v1.0`，无需再次请求推送许可。
+11. 禁止 force-push 或把阶段成果推送到 `main`，除非用户另有明确指示。
 
 ## 项目阶段总览
 
@@ -18,24 +22,24 @@
 
 | 阶段 | 交付主题 | 状态 | 当前工作区/分支 | 最近结果 | 下一入口 |
 |---|---|---|---|---|---|
-| 设计基线 | 架构、BYOK、多 Agent、Skill 安全与总计划 | 已完成 | `D:\Code\codex\openNovel` / `main` | 设计文档与九阶段总计划已形成，文档测试 10/10 通过 | 阶段 0 |
-| 阶段 0 | 基线冻结与测试骨架 | 已完成 | `D:\Code\codex\openNovel\.worktrees\phase-0-test-foundation` / `codex/phase-0-test-foundation` | 实现提交 `80e2581`；最终 `npm ci` 后 Node 90/90、UI 1/1、typecheck、README、build、smoke、acceptance 全部通过 | 创建阶段 1 当天计划并重新核对 Git 状态 |
-| 阶段 1 | 独立项目、本地数据库与项目生命周期 | 待开始 | 未分配 | 依赖阶段 0 | 阶段 0 通过后创建阶段 1 计划 |
-| 阶段 2 | 章节树、纯文本编辑器、版本与文件交换 | 待开始 | 未分配 | 依赖阶段 1 | 阶段 1 通过后创建阶段 2 计划 |
-| 阶段 3 | BYOK 密钥库、Model Gateway 与角色绑定 | 待开始 | 未分配 | 依赖阶段 2 | 阶段 2 通过后创建阶段 3 计划 |
-| 阶段 4 | 小说圣经与结构化共创 | 待开始 | 未分配 | 依赖阶段 3 | 阶段 3 通过后创建阶段 4 计划 |
-| 阶段 5 | 受控多 Agent 正文与选区 AI | 待开始 | 未分配 | 依赖阶段 4 | 阶段 4 通过后创建阶段 5 计划 |
-| 阶段 6 | 长篇上下文、记忆、质量门禁与评测 | 待开始 | 未分配 | 依赖阶段 5 | 阶段 5 通过后创建阶段 6 计划 |
-| 阶段 7 | 外部 Skill 隔离导入、审核与应用 | 待开始 | 未分配 | 依赖阶段 6 | 阶段 6 通过后创建阶段 7 计划 |
-| 阶段 8 | Windows 安装、恢复与最终交付 | 待开始 | 未分配 | 依赖阶段 7 | 阶段 7 通过后创建阶段 8 计划 |
+| 设计基线 | 架构、BYOK、多 Agent、Skill 安全与总计划 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | 设计文档与九阶段总计划已形成，文档测试 10/10 通过 | 阶段 0 |
+| 阶段 0 | 基线冻结与测试骨架 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | 阶段 0 完整成果已进入 `feat/v1.0@0736181`；最终门禁全部通过 | 创建阶段 1 当天计划并核对 `origin/feat/v1.0` |
+| 阶段 1 | 独立项目、本地数据库与项目生命周期 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 0，统一分支治理正在收口 | 治理任务推送后创建阶段 1 计划 |
+| 阶段 2 | 章节树、纯文本编辑器、版本与文件交换 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 1 | 阶段 1 通过并推送后创建阶段 2 计划 |
+| 阶段 3 | BYOK 密钥库、Model Gateway 与角色绑定 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 2 | 阶段 2 通过并推送后创建阶段 3 计划 |
+| 阶段 4 | 小说圣经与结构化共创 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 3 | 阶段 3 通过并推送后创建阶段 4 计划 |
+| 阶段 5 | 受控多 Agent 正文与选区 AI | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 4 | 阶段 4 通过并推送后创建阶段 5 计划 |
+| 阶段 6 | 长篇上下文、记忆、质量门禁与评测 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 5 | 阶段 5 通过并推送后创建阶段 6 计划 |
+| 阶段 7 | 外部 Skill 隔离导入、审核与应用 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 6 | 阶段 6 通过并推送后创建阶段 7 计划 |
+| 阶段 8 | Windows 安装、恢复与最终交付 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 7 | 阶段 7 通过并推送后创建阶段 8 计划 |
 
 ## 工作区登记
 
 | 工作区绝对路径 | 分支 | HEAD | 状态 | 已核实事实 | 接手动作 |
 |---|---|---|---|---|---|
-| `D:\Code\codex\openNovel` | `main` | `f68b4f0` | 已完成 | 设计、进度治理、Electron smoke/CI 和阶段 0 计划已在提交 `f68b4f0` 收口；仅保留未跟踪 `.superpowers/`，不属于阶段 0 | 保留主工作区，不在此继续阶段 0 实施 |
+| `D:\Code\codex\openNovel` | `feat/v1.0` | `0736181` + 本治理任务工作树 | 待验证 | 已从阶段 0 最新提交创建长期分支；README、Node 90/90、UI 1/1 与空白检查通过；仅保留本任务文件和用户原有 `.superpowers/` | 提交治理规则并首次推送 `origin/feat/v1.0` |
 | `D:\Code\codex\openNovel\.worktrees\harness-agent-loop` | `feat/harness-agent-loop` | `31ca681` | 需核实 | 已核对到仅有未跟踪 `.superpowers/`；未检测到相对 `main` 的已提交差异 | 使用该 worktree 前先确认任务所有者和是否仍需保留 |
-| `D:\Code\codex\openNovel\.worktrees\phase-0-test-foundation` | `codex/phase-0-test-foundation` | `80e2581`（阶段 0 实现） | 已完成 | 最终锁文件可由 `npm.cmd ci` 重建；Node 90/90、UI 1/1 与全部退出门禁通过；`src/` 无差异 | 开始阶段 1 前创建当天计划并重新核对全部 worktree |
+| `D:\Code\codex\openNovel\.worktrees\phase-0-test-foundation` | `codex/phase-0-test-foundation` | `0736181` | 已完成 | 阶段 0 代码与交接已进入 `feat/v1.0`；该历史 worktree 不再作为阶段入口 | 保留记录，未经用户授权不删除、修改或复用 |
 
 ## 活动任务
 
@@ -43,16 +47,27 @@
 |---|---|---|---|---|---|---|---|
 | 开发进度清单与阶段入口约束 | 开发治理 | 已完成 | `D:\Code\codex\openNovel` / `main` | `docs/2026-08-07/开发进度清单与阶段入口约束计划.md` | README 契约通过；文档测试 10/10；Git 空白检查通过 | 阶段 0 开工前先隔离遗留修改，并创建含开工记录的阶段计划 | 2026-08-07 |
 | 阶段 0 基线冻结与测试骨架 | 阶段 0 | 已完成 | `D:\Code\codex\openNovel\.worktrees\phase-0-test-foundation` / `codex/phase-0-test-foundation` | `docs/2026-08-07/阶段0基线冻结与测试骨架计划.md` | `npm.cmd ci` 后 Node 90/90 + UI 1/1；typecheck、README、build、smoke、acceptance、空白检查均通过；实现提交 `80e2581` | 创建阶段 1 当天计划，读取本清单并重新核对 Git/worktree 状态 | 2026-08-07 |
+| 后续阶段统一分支与确认后推送约束 | 开发治理 | 待验证 | `D:\Code\codex\openNovel` / `feat/v1.0` | `docs/2026-08-07/后续阶段统一分支与确认后推送约束计划.md` | `npm.cmd ci`、README、Node 90/90、UI 1/1、空白检查通过；沙箱外聚合测试退出 0 | 提交并首次推送 `origin/feat/v1.0`，再回填 upstream 结果 | 2026-08-07 |
 
 ## 遗留变更与风险
 
-- 主工作区在本任务开始前已经不是干净状态；`.github/`、`package.json`、`scripts/`、`tests/` 和 `docs/2026-07-28/` 中存在 Electron smoke/CI 相关修改。本进度治理任务不修改、不暂存、不清理这些内容。
-- `docs/2026-08-06/`、`docs/2026-08-07/` 是多 Agent 小说助手设计、总计划和进度治理文档；提交时必须与上述 Electron smoke/CI 变更分开核对范围。
-- 两个 worktree 当前 HEAD 相同，不能据此推断 `feat/harness-agent-loop` 已合并、已完成或可以删除。
-- 用户已批准在 `main` 上完成现有前置变更的修复、验证和分范围提交；该授权不包含修改或删除 `feat/harness-agent-loop` worktree，也不包含推送远端。
-- 前置变更最终以单一提交 `f68b4f0` 收口，避免共享 README 在分拆提交之间出现不一致；阶段 0 后续变更仅归属 `codex/phase-0-test-foundation` worktree。
+- 根工作区和 `harness-agent-loop` worktree 各有未跟踪 `.superpowers/`；均属于用户既有内容，阶段任务不得读取、修改、清理或暂存。
+- `harness-agent-loop` 与 `phase-0-test-foundation` 是历史 worktree；后续阶段不得复用，且未经用户明确授权不得删除或修改。
+- `main@f68b4f0` 与 `origin/main@31ca681` 均不包含完整阶段 0 成果；阶段 1–8 不得从 `main` 开工或向 `main` 推送。
+- `feat/v1.0` 在本治理任务首次推送前没有 upstream；必须在提交和验证完成后使用 `git push -u origin feat/v1.0` 建立。
 
 ## 最近交接
+
+### 2026-08-07：后续阶段统一分支治理开工
+
+- 工作区：`D:\Code\codex\openNovel`
+- 分支与基线：`feat/v1.0` / `0736181`
+- 当前状态：待验证
+- 已完成：fetch 远端并确认无同名分支；从阶段 0 最新成果创建并切换 `feat/v1.0`；建立统一分支与确认后推送实施计划。
+- 最近验证：`npm.cmd ci` 成功安装 217 个包；`npm.cmd run check:readmes` 通过；沙箱外 `npm.cmd test` 为 Node 90/90、UI 1/1；`git diff --check` 与阶段 0 祖先检查退出 0。沙箱内聚合测试的 Vitest fork worker 曾超时，但 `test:ui` 单独连续通过，且相同聚合命令在沙箱外退出 0，未修改测试配置。
+- 未提交变更：`AGENTS.md`、本进度清单、根 README、当天计划与日期 README，全部归属本治理任务；`.superpowers/` 不属于本任务。
+- 下一步：核对并提交本治理任务文件，首次推送 `origin/feat/v1.0` 后回填 upstream 结果。
+- 阻塞项：无。
 
 ### 2026-08-07：阶段 0 完成
 
