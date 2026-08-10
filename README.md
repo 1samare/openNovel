@@ -1,6 +1,6 @@
 # OpenNovel
 
-OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应用。本仓库已交付 Electron + Vue 3 + TypeScript 基础架构、离线 Agent Harness、独立项目生命周期、章节编辑与版本交换，以及阶段 3 的 BYOK 密钥库、Model Gateway 与角色绑定；阶段 3 已完成本地验收并等待确认推送，真实 Agent 小说工作流仍不在当前交付范围。
+OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应用。本仓库已交付 Electron + Vue 3 + TypeScript 基础架构、离线 Agent Harness、独立项目生命周期、章节编辑与版本交换，以及阶段 3 的 BYOK 密钥库、Model Gateway 与角色绑定；阶段 3 已完成本地验收并获用户确认，等待最终推送，真实 Agent 小说工作流仍不在当前交付范围。
 
 ## 目录用途
 
@@ -116,6 +116,8 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 - 2026-08-10：阶段 3 本地验收完成：模型设置/Profile/三模式六角色路由、密钥全路径审计、生产 Electron 重启解密和两轮独立复审通过；用户在本机设置页确认真实 DeepSeek 连接成功，等待明确完成确认后推送。
 
 - 2026-08-10：阶段 3 实现与本地验收记录提交为 `579d31a`；Actions 治理差异与用户 `.superpowers/` 未进入该提交。
+
+- 2026-08-10：用户明确确认阶段 3 完成，授权已核验提交普通快进推送到 `origin/feat/v1.0`；推送前 fetch 证明 ahead/behind 为 `2/0` 且远端是本地祖先。
 
 ## 技术栈
 

@@ -26,7 +26,7 @@
 | 阶段 0 | 基线冻结与测试骨架 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | 阶段 0 完整成果已进入 `feat/v1.0@0736181`；最终门禁全部通过 | 创建阶段 1 当天计划并核对 `origin/feat/v1.0` |
 | 阶段 1 | 独立项目、本地数据库与项目生命周期 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | 阶段提交已推送至 `origin/feat/v1.0@1a73a03`；复审无 Critical/Important；最终全门禁通过 | 创建阶段 2 当天计划并重新核对远端 |
 | 阶段 2 | 章节树、纯文本编辑器、版本与文件交换 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | 阶段成果已普通快进推送至 `origin/feat/v1.0@b835840`；复审无 Critical/Important；最终全门禁通过 | 创建阶段 3 当天计划并重新核对远端 |
-| 阶段 3 | BYOK 密钥库、Model Gateway 与角色绑定 | 待验证 | `D:\Code\codex\openNovel` / `feat/v1.0@579d31a` | 实现提交已创建；Node 204/204、UI 31/31、全门禁通过、终审无发现；DeepSeek 连接成功 | 提交交接记录，等待用户明确完成确认后推送 |
+| 阶段 3 | BYOK 密钥库、Model Gateway 与角色绑定 | 待验证 | `D:\Code\codex\openNovel` / `feat/v1.0@6d00d94` | 用户已确认阶段完成；实现 `579d31a`、交接 `6d00d94`；全门禁和 DeepSeek 验收通过 | 记录确认、重跑最终门禁并普通快进推送 |
 | 阶段 4 | 小说圣经与结构化共创 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 3 | 阶段 3 通过并推送后创建阶段 4 计划 |
 | 阶段 5 | 受控多 Agent 正文与选区 AI | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 4 | 阶段 4 通过并推送后创建阶段 5 计划 |
 | 阶段 6 | 长篇上下文、记忆、质量门禁与评测 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 5 | 阶段 5 通过并推送后创建阶段 6 计划 |
@@ -37,7 +37,7 @@
 
 | 工作区绝对路径 | 分支 | HEAD | 状态 | 已核实事实 | 接手动作 |
 |---|---|---|---|---|---|
-| `D:\Code\codex\openNovel` | `feat/v1.0` | `579d31a`（阶段 3 实现提交） | 待验证 | 阶段 3 实现、全门禁、终审与真实 DeepSeek 连接均通过；实现提交已创建；独立治理差异与用户 `.superpowers/` 排除 | 提交交接记录并等待用户明确完成确认后推送 |
+| `D:\Code\codex\openNovel` | `feat/v1.0` | `6d00d94`（阶段 3 交接提交） | 待验证 | 用户已确认阶段完成；fetch 后 ahead/behind `2/0` 且可快进；独立治理差异与用户 `.superpowers/` 排除 | 提交确认记录、重跑最终门禁并推送 |
 | `D:\Code\codex\openNovel\.worktrees\harness-agent-loop` | `feat/harness-agent-loop` | `31ca681` | 需核实 | 已核对到仅有未跟踪 `.superpowers/`；未检测到相对 `main` 的已提交差异 | 使用该 worktree 前先确认任务所有者和是否仍需保留 |
 | `D:\Code\codex\openNovel\.worktrees\phase-0-test-foundation` | `codex/phase-0-test-foundation` | `0736181` | 已完成 | 阶段 0 代码与交接已进入 `feat/v1.0`；该历史 worktree 不再作为阶段入口 | 保留记录，未经用户授权不删除、修改或复用 |
 
@@ -50,7 +50,7 @@
 | 后续阶段统一分支与确认后推送约束 | 开发治理 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | `docs/2026-08-07/后续阶段统一分支与确认后推送约束计划.md` | 治理提交 `a548a23` 已推送；upstream 正确且 0 ahead/0 behind；README、Node 90/90、UI 1/1、空白检查通过 | 创建阶段 1 当天计划并按 `feat/v1.0` 单工作区规则开工 | 2026-08-07 |
 | 阶段 1 独立项目与本地数据库 | 阶段 1 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0@1a73a03`（阶段完成） | `docs/2026-08-07/阶段1独立项目与本地数据库计划.md` | 用户已确认；阶段提交已推送；Node 123/123、UI 8/8、类型、README、build、smoke、acceptance、空白检查均通过；upstream 0/0 | 创建阶段 2 当天计划，读取本清单并重新 fetch 核对远端 | 2026-08-10 |
 | 阶段 2 章节编辑版本与文件交换 | 阶段 2 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0@b835840`（阶段交接） | `docs/2026-08-10/阶段2章节编辑版本与文件交换计划.md` | 用户已确认；推送前 Node 153/153、UI 23/23、README、类型、build、smoke、acceptance、audit 0；`b4ec16f..b835840` 普通快进推送成功且 upstream 0/0 | 创建阶段 3 当天计划，读取本清单并重新 fetch 核对远端 | 2026-08-10 |
-| 阶段 3 BYOK 密钥库、Model Gateway 与角色绑定 | 阶段 3 | 待验证 | `D:\Code\codex\openNovel` / `feat/v1.0@579d31a`（实现提交） | `docs/2026-08-10/阶段3BYOK密钥库ModelGateway与角色绑定计划.md` | 实现提交 `579d31a`；Node 204/204、UI 31/31、全门禁通过；终审无发现；DeepSeek 连接成功 | 提交交接记录，等待用户明确确认阶段完成后普通快进推送 | 2026-08-10 |
+| 阶段 3 BYOK 密钥库、Model Gateway 与角色绑定 | 阶段 3 | 待验证 | `D:\Code\codex\openNovel` / `feat/v1.0@6d00d94`（交接提交） | `docs/2026-08-10/阶段3BYOK密钥库ModelGateway与角色绑定计划.md` | 用户已确认完成；实现 `579d31a`、交接 `6d00d94`；全门禁、终审和 DeepSeek 验收通过 | 提交确认记录、重跑最终门禁并普通快进推送 | 2026-08-10 |
 | PR Quality 测试环境隔离修复 | 阶段 2 内 CI 修复 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0@b4ec16f` | `docs/2026-08-10/PR质量检查测试环境隔离修复计划.md` | 本地完整门禁通过；push/pull_request Quality 均通过；upstream 0/0 | 恢复阶段 2 前核对其未提交差异与活动任务实际状态 | 2026-08-10 |
 
 ## 遗留变更与风险
@@ -63,15 +63,15 @@
 
 ## 最近交接
 
-### 2026-08-10：阶段 3 本地验收完成，等待完成确认
+### 2026-08-10：阶段 3 用户已确认，等待最终推送
 
 - 工作区：`D:\Code\codex\openNovel`
-- 分支与提交：`feat/v1.0` / 开工基线 `419b4d8`，实现提交 `579d31a`
-- 当前状态：待验证（全部验收完成，等待用户明确完成确认）
+- 分支与提交：`feat/v1.0` / 开工基线 `419b4d8`，实现提交 `579d31a`，验收交接提交 `6d00d94`
+- 当前状态：待验证（用户已明确确认完成，等待最终门禁与普通快进推送）
 - 已完成：完整读取开发进度清单、架构设计和全阶段计划；核对根工作区、分支、HEAD、历史 worktree 与既有修改归属；创建当天阶段 3 计划；fetch 后远端 0/0。Task 1–8 已交付完整模型域、三类适配器、Gateway、白名单日志、safeStorage 主进程组合、固定九命令 IPC、严格 preload 校验、取消/关闭资源所有权、BYOK 设置/Profile/三模式六角色绑定页面、全路径密钥泄漏测试与生产 Electron Model smoke。两轮独立复审发现均已按 RED/GREEN 修复，终审无 Critical、Important 或 Minor。
 - 最近验证：`npm.cmd run check:readmes`、Node/Web typecheck、`npm.cmd test`（Node 204/204 + UI 31/31）、生产 build、`npm.cmd run test:electron-smoke`、`npm.cmd run test:acceptance`、npm 官方 audit（0 vulnerabilities）与 Git 空白检查均退出 0；生产 smoke 覆盖 Model 九方法、safeStorage、每次进程认证、回环 Provider、重启持久化与关闭后明文产物扫描；用户在本机设置页确认真实 DeepSeek 连接成功。
-- 未提交变更：阶段 3 实现已在 `579d31a` 提交；本计划与进度的提交号交接回填归属阶段 3，待单独提交。GitHub Actions 默认禁用计划及其 `AGENTS.md`/README hunk 归属独立治理任务；用户既有 `.superpowers/` 继续排除。
-- 下一步：提交本交接记录；随后等待用户明确确认阶段开发完成，确认即授权普通快进推送 `origin/feat/v1.0` 并核对 upstream。
+- 未提交变更：阶段 3 实现与验收交接已分别在 `579d31a`、`6d00d94` 提交；本次用户完成确认与推送前状态回填归属阶段 3，待单独提交。GitHub Actions 默认禁用计划及其 `AGENTS.md`/README hunk 归属独立治理任务；用户既有 `.superpowers/` 继续排除。
+- 下一步：提交本确认记录，重跑 README、类型、Node/UI、build、production smoke、acceptance、audit 与空白门禁；全部通过后普通快进推送 `origin/feat/v1.0` 并核对 upstream。
 - 阻塞项：无。真实 DeepSeek 连接已由用户在本机设置页确认成功；Key 未进入计划、进度、日志或 Git。Anthropic 与 Gemini 已由本机原生协议 fake server 覆盖。
 
 ### 2026-08-10：阶段 2 完成并推送

@@ -639,12 +639,13 @@ git diff --check
 - 生产 Electron smoke 使用隔离 `userData` 和回环 fake provider 验证 Model 九方法桥接、Electron `safeStorage`、连接探测、模型列表、Profile 保存及重启持久化；真实 DeepSeek 联网验证仍等待用户在应用设置页本地输入凭据，不把 fake provider 结果冒充真实供应商通过。
 - 真实供应商验收已由用户在本机设置页完成并明确确认 DeepSeek“连接成功”；未读取、输出或持久化用户 Key 到计划、进度、日志或 Git。
 - 阶段 3 实现与本地验收记录已提交为 `579d31a`（`feat: complete phase 3 model gateway`）；提交共 58 个文件、8231 行新增、44 行删除，暂存边界排除了 Actions 治理任务与 `.superpowers/`。
+- 阶段验收交接已提交为 `6d00d94`；用户于 2026-08-10 明确确认“阶段 3 完成”，按项目约束同时授权将已核验提交普通快进推送到 `origin/feat/v1.0`。
 - 既有 GitHub Actions 默认禁用治理差异与 `.superpowers/` 保持原归属，本阶段不暂存或覆盖。
 
 ## 最近验证结果
 
 - `git fetch --prune origin`：成功。
-- `git rev-list --left-right --count feat/v1.0...origin/feat/v1.0`：`0/0`。
+- 推送前 `git fetch --prune origin` 后，`git rev-list --left-right --count feat/v1.0...origin/feat/v1.0`：`2/0`；`origin/feat/v1.0` 是本地分支祖先，可普通快进。
 - `npm.cmd run check:readmes`：通过。
 - `npm.cmd run typecheck:node`、`npm.cmd run typecheck:web`：均退出 0。
 - `npm.cmd test`：Node 204/204、UI 31/31 通过。
@@ -654,4 +655,4 @@ git diff --check
 - `git diff --check` 与 `git diff --cached --check`：退出 0，仅显示 Git 的 LF/CRLF 转换提醒。
 - 独立终审：两轮审查发现均经 RED/GREEN 修复；最终复核无 Critical、Important 或 Minor。
 - 当前阻塞：无；真实 DeepSeek 连接已由用户本机确认成功。
-- 下一步：提交本交接记录，等待用户明确确认阶段开发完成；确认后普通快进推送 `feat/v1.0` 并核对 upstream。
+- 下一步：提交用户完成确认记录，重跑最终本地门禁，普通快进推送 `feat/v1.0` 并核对 upstream。
