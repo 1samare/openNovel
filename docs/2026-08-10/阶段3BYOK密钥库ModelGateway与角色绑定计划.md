@@ -636,16 +636,18 @@ git diff --check
 - Task 2 新增注入式 OS cipher 密钥库与逐跳安全 fetch；RED 为两个模块缺失，GREEN 后真实临时目录/URL 测试 5/5 与 `typecheck:node` 通过。密钥替换失败保留旧密文，HTTPS 跳转到 HTTP 在第二次请求前终止，HTTPS 跨 origin 会移除 Authorization/Cookie。
 - Task 3–7 已交付连接/Profile/项目绑定持久化、三类 Provider Adapter、供应商无关 Gateway、稳定错误/重试/取消矩阵、白名单日志、主进程 Runtime、固定九命令 IPC/Preload 和真实模型设置页；DeepSeek 预设、手工模型 ID、能力档案及三模式六角色路由均可操作。
 - Task 8 的全路径 sentinel 测试扫描真实 control/project SQLite、密文、备份、导出、日志和公开 IPC，最终 1/1 通过。复审 RED/GREEN 补强了 Anthropic/Gemini 敏感头、重定向响应体取消、跨供应商双门禁、短密钥提示、Provider request ID 脱敏、保守能力探测、原生 Provider 默认端点和按供应商类型判断路由。
-- 生产 Electron smoke 使用隔离 `userData` 和回环 fake provider 验证 Model 九方法桥接、Electron `safeStorage`、连接探测、模型列表、Profile 保存及重启持久化；真实 DeepSeek 联网验证仍等待用户在应用设置页本地输入凭据，不把 fake provider 结果冒充真实供应商通过。
+- 生产 Electron smoke 使用隔离 `userData` 和回环 fake provider 验证 Model 九方法桥接、Electron `safeStorage`、连接探测、模型列表、Profile 保存及重启持久化；真实 DeepSeek 联网验证由用户在应用设置页本地输入凭据完成，不把 fake provider 结果冒充真实供应商通过。
 - 真实供应商验收已由用户在本机设置页完成并明确确认 DeepSeek“连接成功”；未读取、输出或持久化用户 Key 到计划、进度、日志或 Git。
 - 阶段 3 实现与本地验收记录已提交为 `579d31a`（`feat: complete phase 3 model gateway`）；提交共 58 个文件、8231 行新增、44 行删除，暂存边界排除了 Actions 治理任务与 `.superpowers/`。
 - 阶段验收交接已提交为 `6d00d94`；用户于 2026-08-10 明确确认“阶段 3 完成”，按项目约束同时授权将已核验提交普通快进推送到 `origin/feat/v1.0`。
+- 用户确认记录已提交为 `ebc2824`；推送前完整门禁复跑通过，`419b4d8..ebc2824` 已普通快进推送到 `origin/feat/v1.0`，推送后本地与远端均为 `ebc2824`、ahead/behind 为 `0/0`。
 - 既有 GitHub Actions 默认禁用治理差异与 `.superpowers/` 保持原归属，本阶段不暂存或覆盖。
 
 ## 最近验证结果
 
 - `git fetch --prune origin`：成功。
-- 推送前 `git fetch --prune origin` 后，`git rev-list --left-right --count feat/v1.0...origin/feat/v1.0`：`2/0`；`origin/feat/v1.0` 是本地分支祖先，可普通快进。
+- 推送前最终 `git fetch --prune origin` 后，`git rev-list --left-right --count feat/v1.0...origin/feat/v1.0`：`3/0`；`origin/feat/v1.0` 是本地分支祖先。
+- `git push origin feat/v1.0`：`419b4d8..ebc2824` 普通快进推送成功；推送后本地与 `origin/feat/v1.0` 均为 `ebc2824`，ahead/behind `0/0`。
 - `npm.cmd run check:readmes`：通过。
 - `npm.cmd run typecheck:node`、`npm.cmd run typecheck:web`：均退出 0。
 - `npm.cmd test`：Node 204/204、UI 31/31 通过。
@@ -655,4 +657,4 @@ git diff --check
 - `git diff --check` 与 `git diff --cached --check`：退出 0，仅显示 Git 的 LF/CRLF 转换提醒。
 - 独立终审：两轮审查发现均经 RED/GREEN 修复；最终复核无 Critical、Important 或 Minor。
 - 当前阻塞：无；真实 DeepSeek 连接已由用户本机确认成功。
-- 下一步：提交用户完成确认记录，重跑最终本地门禁，普通快进推送 `feat/v1.0` 并核对 upstream。
+- 下一步：阶段 4 开工前完整读取 `DEVELOPMENT_PROGRESS.md`，创建执行当天的阶段 4 计划，确认根工作区与 `feat/v1.0` 后重新 fetch 核对远端。

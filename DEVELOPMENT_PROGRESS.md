@@ -26,8 +26,8 @@
 | 阶段 0 | 基线冻结与测试骨架 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | 阶段 0 完整成果已进入 `feat/v1.0@0736181`；最终门禁全部通过 | 创建阶段 1 当天计划并核对 `origin/feat/v1.0` |
 | 阶段 1 | 独立项目、本地数据库与项目生命周期 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | 阶段提交已推送至 `origin/feat/v1.0@1a73a03`；复审无 Critical/Important；最终全门禁通过 | 创建阶段 2 当天计划并重新核对远端 |
 | 阶段 2 | 章节树、纯文本编辑器、版本与文件交换 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | 阶段成果已普通快进推送至 `origin/feat/v1.0@b835840`；复审无 Critical/Important；最终全门禁通过 | 创建阶段 3 当天计划并重新核对远端 |
-| 阶段 3 | BYOK 密钥库、Model Gateway 与角色绑定 | 待验证 | `D:\Code\codex\openNovel` / `feat/v1.0@6d00d94` | 用户已确认阶段完成；实现 `579d31a`、交接 `6d00d94`；全门禁和 DeepSeek 验收通过 | 记录确认、重跑最终门禁并普通快进推送 |
-| 阶段 4 | 小说圣经与结构化共创 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 3 | 阶段 3 通过并推送后创建阶段 4 计划 |
+| 阶段 3 | BYOK 密钥库、Model Gateway 与角色绑定 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0@ebc2824` | 用户已确认；阶段成果普通快进推送至 `origin/feat/v1.0@ebc2824`；全门禁、终审和 DeepSeek 验收通过 | 创建阶段 4 当天计划并重新核对远端 |
+| 阶段 4 | 小说圣经与结构化共创 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 阶段 3 已完成并推送 | 完整读取本清单，创建阶段 4 当天计划并 fetch 核对远端 |
 | 阶段 5 | 受控多 Agent 正文与选区 AI | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 4 | 阶段 4 通过并推送后创建阶段 5 计划 |
 | 阶段 6 | 长篇上下文、记忆、质量门禁与评测 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 5 | 阶段 5 通过并推送后创建阶段 6 计划 |
 | 阶段 7 | 外部 Skill 隔离导入、审核与应用 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 6 | 阶段 6 通过并推送后创建阶段 7 计划 |
@@ -37,7 +37,7 @@
 
 | 工作区绝对路径 | 分支 | HEAD | 状态 | 已核实事实 | 接手动作 |
 |---|---|---|---|---|---|
-| `D:\Code\codex\openNovel` | `feat/v1.0` | `6d00d94`（阶段 3 交接提交） | 待验证 | 用户已确认阶段完成；fetch 后 ahead/behind `2/0` 且可快进；独立治理差异与用户 `.superpowers/` 排除 | 提交确认记录、重跑最终门禁并推送 |
+| `D:\Code\codex\openNovel` | `feat/v1.0` | `ebc2824`（阶段 3 确认记录） | 已完成 | 用户已确认；`419b4d8..ebc2824` 普通快进推送成功，upstream 0/0；独立治理差异与用户 `.superpowers/` 排除 | 创建阶段 4 当天计划，重新读取本清单并 fetch 核对远端 |
 | `D:\Code\codex\openNovel\.worktrees\harness-agent-loop` | `feat/harness-agent-loop` | `31ca681` | 需核实 | 已核对到仅有未跟踪 `.superpowers/`；未检测到相对 `main` 的已提交差异 | 使用该 worktree 前先确认任务所有者和是否仍需保留 |
 | `D:\Code\codex\openNovel\.worktrees\phase-0-test-foundation` | `codex/phase-0-test-foundation` | `0736181` | 已完成 | 阶段 0 代码与交接已进入 `feat/v1.0`；该历史 worktree 不再作为阶段入口 | 保留记录，未经用户授权不删除、修改或复用 |
 
@@ -50,7 +50,7 @@
 | 后续阶段统一分支与确认后推送约束 | 开发治理 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | `docs/2026-08-07/后续阶段统一分支与确认后推送约束计划.md` | 治理提交 `a548a23` 已推送；upstream 正确且 0 ahead/0 behind；README、Node 90/90、UI 1/1、空白检查通过 | 创建阶段 1 当天计划并按 `feat/v1.0` 单工作区规则开工 | 2026-08-07 |
 | 阶段 1 独立项目与本地数据库 | 阶段 1 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0@1a73a03`（阶段完成） | `docs/2026-08-07/阶段1独立项目与本地数据库计划.md` | 用户已确认；阶段提交已推送；Node 123/123、UI 8/8、类型、README、build、smoke、acceptance、空白检查均通过；upstream 0/0 | 创建阶段 2 当天计划，读取本清单并重新 fetch 核对远端 | 2026-08-10 |
 | 阶段 2 章节编辑版本与文件交换 | 阶段 2 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0@b835840`（阶段交接） | `docs/2026-08-10/阶段2章节编辑版本与文件交换计划.md` | 用户已确认；推送前 Node 153/153、UI 23/23、README、类型、build、smoke、acceptance、audit 0；`b4ec16f..b835840` 普通快进推送成功且 upstream 0/0 | 创建阶段 3 当天计划，读取本清单并重新 fetch 核对远端 | 2026-08-10 |
-| 阶段 3 BYOK 密钥库、Model Gateway 与角色绑定 | 阶段 3 | 待验证 | `D:\Code\codex\openNovel` / `feat/v1.0@6d00d94`（交接提交） | `docs/2026-08-10/阶段3BYOK密钥库ModelGateway与角色绑定计划.md` | 用户已确认完成；实现 `579d31a`、交接 `6d00d94`；全门禁、终审和 DeepSeek 验收通过 | 提交确认记录、重跑最终门禁并普通快进推送 | 2026-08-10 |
+| 阶段 3 BYOK 密钥库、Model Gateway 与角色绑定 | 阶段 3 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0@ebc2824`（确认记录） | `docs/2026-08-10/阶段3BYOK密钥库ModelGateway与角色绑定计划.md` | 用户已确认；推送前 Node 204/204、UI 31/31、README、类型、build、smoke、acceptance、audit 0；`419b4d8..ebc2824` 普通快进推送成功且 upstream 0/0 | 创建阶段 4 当天计划，读取本清单并重新 fetch 核对远端 | 2026-08-10 |
 | PR Quality 测试环境隔离修复 | 阶段 2 内 CI 修复 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0@b4ec16f` | `docs/2026-08-10/PR质量检查测试环境隔离修复计划.md` | 本地完整门禁通过；push/pull_request Quality 均通过；upstream 0/0 | 恢复阶段 2 前核对其未提交差异与活动任务实际状态 | 2026-08-10 |
 
 ## 遗留变更与风险
@@ -59,19 +59,19 @@
 - `harness-agent-loop` 与 `phase-0-test-foundation` 是历史 worktree；后续阶段不得复用，且未经用户明确授权不得删除或修改。
 - `main@f68b4f0` 与 `origin/main@31ca681` 均不包含完整阶段 0 成果；阶段 1–8 不得从 `main` 开工或向 `main` 推送。
 - `feat/v1.0` 已建立 `origin/feat/v1.0` upstream；后续阶段只允许在用户确认完成后做普通快进推送。
-- 根工作区另有未提交的 GitHub Actions 默认禁用治理差异：`AGENTS.md`、根 `README.md`、`docs/2026-08-10/README.md` 和对应计划；阶段 3 保留其内容并在提交时排除非本阶段 hunk。
+- 根工作区另有未提交的 GitHub Actions 默认禁用治理差异：`AGENTS.md`、根 `README.md`、`docs/2026-08-10/README.md` 和对应计划；阶段 3 提交与推送均排除了非本阶段 hunk。
 
 ## 最近交接
 
-### 2026-08-10：阶段 3 用户已确认，等待最终推送
+### 2026-08-10：阶段 3 完成并推送
 
 - 工作区：`D:\Code\codex\openNovel`
-- 分支与提交：`feat/v1.0` / 开工基线 `419b4d8`，实现提交 `579d31a`，验收交接提交 `6d00d94`
-- 当前状态：待验证（用户已明确确认完成，等待最终门禁与普通快进推送）
-- 已完成：完整读取开发进度清单、架构设计和全阶段计划；核对根工作区、分支、HEAD、历史 worktree 与既有修改归属；创建当天阶段 3 计划；fetch 后远端 0/0。Task 1–8 已交付完整模型域、三类适配器、Gateway、白名单日志、safeStorage 主进程组合、固定九命令 IPC、严格 preload 校验、取消/关闭资源所有权、BYOK 设置/Profile/三模式六角色绑定页面、全路径密钥泄漏测试与生产 Electron Model smoke。两轮独立复审发现均已按 RED/GREEN 修复，终审无 Critical、Important 或 Minor。
-- 最近验证：`npm.cmd run check:readmes`、Node/Web typecheck、`npm.cmd test`（Node 204/204 + UI 31/31）、生产 build、`npm.cmd run test:electron-smoke`、`npm.cmd run test:acceptance`、npm 官方 audit（0 vulnerabilities）与 Git 空白检查均退出 0；生产 smoke 覆盖 Model 九方法、safeStorage、每次进程认证、回环 Provider、重启持久化与关闭后明文产物扫描；用户在本机设置页确认真实 DeepSeek 连接成功。
-- 未提交变更：阶段 3 实现与验收交接已分别在 `579d31a`、`6d00d94` 提交；本次用户完成确认与推送前状态回填归属阶段 3，待单独提交。GitHub Actions 默认禁用计划及其 `AGENTS.md`/README hunk 归属独立治理任务；用户既有 `.superpowers/` 继续排除。
-- 下一步：提交本确认记录，重跑 README、类型、Node/UI、build、production smoke、acceptance、audit 与空白门禁；全部通过后普通快进推送 `origin/feat/v1.0` 并核对 upstream。
+- 分支与提交：`feat/v1.0` / 开工基线 `419b4d8`，实现提交 `579d31a`，验收交接提交 `6d00d94`，用户确认记录 `ebc2824`
+- 当前状态：已完成
+- 已完成：完整读取开发进度清单、架构设计和全阶段计划；核对根工作区、分支、HEAD、历史 worktree 与既有修改归属；创建当天阶段 3 计划。Task 1–8 已交付完整模型域、三类适配器、Gateway、白名单日志、safeStorage 主进程组合、固定九命令 IPC、严格 preload 校验、取消/关闭资源所有权、BYOK 设置/Profile/三模式六角色绑定页面、全路径密钥泄漏测试与生产 Electron Model smoke。两轮独立复审发现均已按 RED/GREEN 修复，终审无 Critical、Important 或 Minor；用户确认完成后，`419b4d8..ebc2824` 已普通快进推送到 `origin/feat/v1.0`，未 force-push、未触碰 `main`。
+- 最近验证：推送前重新执行 `npm.cmd run check:readmes`、`npm.cmd run typecheck`、`npm.cmd test`（Node 204/204 + UI 31/31）、生产 build、`npm.cmd run test:electron-smoke`、`npm.cmd run test:acceptance`、npm 官方 audit（0 vulnerabilities）与 Git 空白检查，全部退出 0；两次生产验收均输出 `Electron production smoke passed`。生产 smoke 覆盖 Model 九方法、safeStorage、每次进程认证、回环 Provider、重启持久化与关闭后明文产物扫描；用户在本机设置页确认真实 DeepSeek 连接成功。推送后本地与 `origin/feat/v1.0` 均为 `ebc2824`，ahead/behind 0/0。
+- 未提交变更：本完成记录由当前 Git HEAD 承载；GitHub Actions 默认禁用计划及其 `AGENTS.md`/README hunk 归属独立治理任务，用户既有 `.superpowers/` 继续排除，均未进入阶段 3 提交或推送。
+- 下一步：阶段 4 开工前完整读取本清单，创建执行当天的阶段 4 计划，确认仍在根工作区 `feat/v1.0`，并重新 fetch 核对远端。
 - 阻塞项：无。真实 DeepSeek 连接已由用户在本机设置页确认成功；Key 未进入计划、进度、日志或 Git。Anthropic 与 Gemini 已由本机原生协议 fake server 覆盖。
 
 ### 2026-08-10：阶段 2 完成并推送
