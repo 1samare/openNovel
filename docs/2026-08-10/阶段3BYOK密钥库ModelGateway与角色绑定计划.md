@@ -640,14 +640,14 @@ git diff --check
 - 真实供应商验收已由用户在本机设置页完成并明确确认 DeepSeek“连接成功”；未读取、输出或持久化用户 Key 到计划、进度、日志或 Git。
 - 阶段 3 实现与本地验收记录已提交为 `579d31a`（`feat: complete phase 3 model gateway`）；提交共 58 个文件、8231 行新增、44 行删除，暂存边界排除了 Actions 治理任务与 `.superpowers/`。
 - 阶段验收交接已提交为 `6d00d94`；用户于 2026-08-10 明确确认“阶段 3 完成”，按项目约束同时授权将已核验提交普通快进推送到 `origin/feat/v1.0`。
-- 用户确认记录已提交为 `ebc2824`；推送前完整门禁复跑通过，`419b4d8..ebc2824` 已普通快进推送到 `origin/feat/v1.0`，推送后本地与远端均为 `ebc2824`、ahead/behind 为 `0/0`。
+- 用户确认记录已提交为 `ebc2824`；推送前完整门禁复跑通过，`419b4d8..ebc2824` 已普通快进推送到 `origin/feat/v1.0`；最终完成记录见当前 HEAD，同样已普通快进推送，最终 upstream ahead/behind 为 `0/0`。
 - 既有 GitHub Actions 默认禁用治理差异与 `.superpowers/` 保持原归属，本阶段不暂存或覆盖。
 
 ## 最近验证结果
 
 - `git fetch --prune origin`：成功。
 - 推送前最终 `git fetch --prune origin` 后，`git rev-list --left-right --count feat/v1.0...origin/feat/v1.0`：`3/0`；`origin/feat/v1.0` 是本地分支祖先。
-- `git push origin feat/v1.0`：`419b4d8..ebc2824` 普通快进推送成功；推送后本地与 `origin/feat/v1.0` 均为 `ebc2824`，ahead/behind `0/0`。
+- `git push origin feat/v1.0`：阶段交付边界 `419b4d8..ebc2824` 与后续最终完成记录均普通快进推送成功；最终本地 HEAD 与 `origin/feat/v1.0` 一致，ahead/behind `0/0`。
 - `npm.cmd run check:readmes`：通过。
 - `npm.cmd run typecheck:node`、`npm.cmd run typecheck:web`：均退出 0。
 - `npm.cmd test`：Node 204/204、UI 31/31 通过。
