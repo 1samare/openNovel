@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { access, mkdtemp, readdir, rename, rm } from 'node:fs/promises'
+import { access, mkdtemp, readdir, realpath, rename, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
@@ -110,11 +110,12 @@ test('creates a verified backup and restores it into an empty destination', asyn
     backupRoot: backup.backupPath,
     destinationRoot: restoredRoot
   })
+  const canonicalRestoredRoot = await realpath(restoredRoot)
 
   assert.equal(restored.projectId, created.projectId)
   assert.equal(restored.title, '逆光列车')
-  assert.equal(restored.root, restoredRoot)
-  assert.equal((await service.listRecent())[0].projectPath, restoredRoot)
+  assert.equal(restored.root, canonicalRestoredRoot)
+  assert.equal((await service.listRecent())[0].projectPath, canonicalRestoredRoot)
   await access(join(restoredRoot, 'attachments'))
   await access(join(restoredRoot, 'project.sqlite3'))
 })
