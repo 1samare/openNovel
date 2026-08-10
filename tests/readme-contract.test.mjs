@@ -196,7 +196,11 @@ test('uses the push event before SHA in a clean checkout', async (t) => {
   run(directory, 'git', ['commit', '--quiet', '-m', 'change app'])
   run(directory, 'git', ['clone', '--quiet', directory, checkout])
 
-  const result = runChecker(checkout, { GITHUB_EVENT_BEFORE: before })
+  const result = runChecker(checkout, {
+    README_CHECK_BASE: '',
+    GITHUB_BASE_REF: '',
+    GITHUB_EVENT_BEFORE: before
+  })
 
   assert.equal(result.status, 1)
   assert.match(result.output, /src/)
