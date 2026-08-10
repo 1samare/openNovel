@@ -12,6 +12,14 @@ import {
 } from './agent-runtime.ts'
 import type { AgentSenderPolicy } from './agent-ipc-security.ts'
 import { registerProjectIpcHandlers } from './project-ipc.ts'
+import { registerChapterIpcHandlers } from './chapter-ipc.ts'
+import { createChapterRuntime, type ChapterDialogs } from './chapter-runtime.ts'
+import type { ExportFormat } from '../shared/chapter.ts'
+import {
+  createRendererFlushCoordinator,
+  destroyWindowsForForcedExit,
+  RendererFlushError
+} from './renderer-flush.ts'
 import {
   createProjectRuntime,
   createProjectShutdownGate,
@@ -62,9 +70,14 @@ const projectDialogs: ProjectDialogs = {
   chooseDirectory: async (purpose) => {
     const result = await dialog.showOpenDialog({
       title: directoryTitles[purpose],
-      properties: purpose === 'open' || purpose === 'restore-backup'
+      properties: purpose === 'restore-backup'
+        ? ['openFile']
+        : purpose === 'open'
         ? ['openDirectory']
-        : ['openDirectory', 'createDirectory']
+        : ['openDirectory', 'createDirectory'],
+      ...(purpose === 'restore-backup'
+        ? { filters: [{ name: 'OpenNovel 项目备份', extensions: ['opennovel.zip'] }] }
+        : {})
     })
     return result.canceled ? undefined : result.filePaths[0]
   },
@@ -79,6 +92,32 @@ const projectDialogs: ProjectDialogs = {
       noLink: true
     })
     return result.response === 1
+  }
+}
+
+const exportExtensions: Record<ExportFormat, string> = {
+  txt: 'txt',
+  markdown: 'md',
+  docx: 'docx'
+}
+
+const chapterDialogs: ChapterDialogs = {
+  chooseImportFile: async () => {
+    const result = await dialog.showOpenDialog({
+      title: '选择要导入的文本',
+      properties: ['openFile'],
+      filters: [{ name: '文本与 Markdown', extensions: ['txt', 'md', 'markdown'] }]
+    })
+    return result.canceled ? undefined : result.filePaths[0]
+  },
+  chooseExportFile: async (format, projectTitle) => {
+    const extension = exportExtensions[format]
+    const result = await dialog.showSaveDialog({
+      title: `导出${format.toUpperCase()}`,
+      defaultPath: `${projectTitle}.${extension}`,
+      filters: [{ name: `${format.toUpperCase()} 文件`, extensions: [extension] }]
+    })
+    return result.canceled ? undefined : result.filePath
   }
 }
 
@@ -122,13 +161,35 @@ const createMainWindow = (runtime: AgentRuntime): BrowserWindow => {
 }
 
 let disposeAgentRuntime = (): void => undefined
+let disposeRendererFlushRuntime = (): void => undefined
+let flushActiveRenderers = async (): Promise<boolean> => true
 let shutdownProjectRuntime = async (): Promise<void> => undefined
+const shutdownApplicationResources = async (): Promise<void> => {
+  disposeAgentRuntime()
+  disposeRendererFlushRuntime()
+  await shutdownProjectRuntime()
+}
 const shutdownGate = createProjectShutdownGate({
   shutdown: async () => {
-    disposeAgentRuntime()
-    await shutdownProjectRuntime()
+    if (!(await flushActiveRenderers())) throw new RendererFlushError()
+    await shutdownApplicationResources()
   },
-  onFailure: async () => {
+  onFailure: async (error) => {
+    if (error instanceof RendererFlushError) {
+      const result = await dialog.showMessageBox({
+        type: 'warning',
+        title: '草稿尚未安全保存',
+        message: '至少一个编辑窗口未能确认保存。可以返回继续保存，或明确放弃未保存内容后退出。',
+        buttons: ['返回继续保存', '放弃未保存内容并退出'],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true
+      })
+      if (result.response === 0) return false
+      await shutdownApplicationResources().catch(() => undefined)
+      destroyWindowsForForcedExit(activeWindows)
+      return true
+    }
     console.error('Project shutdown failed')
     await dialog.showMessageBox({
       type: 'error',
@@ -137,12 +198,21 @@ const shutdownGate = createProjectShutdownGate({
       buttons: ['安全退出'],
       noLink: true
     })
+    return true
   },
   requestQuit: () => app.quit()
 })
 
 app.whenReady().then(async () => {
   const policy = senderPolicy()
+  const rendererFlush = createRendererFlushCoordinator({
+    ipcMain,
+    senderPolicy: policy
+  })
+  disposeRendererFlushRuntime = () => rendererFlush.dispose()
+  flushActiveRenderers = () => rendererFlush.requestFlush(
+    [...activeWindows].map((window) => window.webContents)
+  )
   const runtime = createAgentRuntime({
     storageRoot: join(app.getPath('userData'), 'agent-runs'),
     senderPolicy: policy,
@@ -151,18 +221,29 @@ app.whenReady().then(async () => {
   const projectService = await ProjectService.start(
     join(app.getPath('userData'), 'control.sqlite3')
   )
+  const chapterRuntime = createChapterRuntime({
+    project: projectService,
+    dialogs: chapterDialogs,
+    senderPolicy: policy
+  })
   const projectRuntime = createProjectRuntime({
     service: projectService,
     dialogs: projectDialogs,
-    senderPolicy: policy
+    senderPolicy: policy,
+    beforeProjectClose: () => chapterRuntime.close()
   })
-  shutdownProjectRuntime = () => projectRuntime.shutdown()
+  shutdownProjectRuntime = async () => {
+    await chapterRuntime.close()
+    await projectRuntime.shutdown()
+  }
   disposeAgentRuntime = await initializeAgentRuntime({
     runtime,
     registerIpc: () => {
       const disposeAgentIpc = registerAgentIpcHandlers(ipcMain, runtime)
       const disposeProjectIpc = registerProjectIpcHandlers(ipcMain, projectRuntime)
+      const disposeChapterIpc = registerChapterIpcHandlers(ipcMain, chapterRuntime)
       return () => {
+        disposeChapterIpc()
         disposeProjectIpc()
         disposeAgentIpc()
       }
@@ -178,8 +259,7 @@ app.whenReady().then(async () => {
   })
 }).catch(async () => {
   console.error('应用启动失败')
-  disposeAgentRuntime()
-  await shutdownProjectRuntime().catch(() => undefined)
+  await shutdownApplicationResources().catch(() => undefined)
   await dialog.showMessageBox({
     type: 'error',
     title: '应用启动失败',

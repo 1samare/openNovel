@@ -4,6 +4,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 
 import type { ProjectApi, ProjectResult, ProjectSummary } from '../../src/shared/project'
 import WorkspaceLayout from '../../src/renderer/src/layouts/WorkspaceLayout.vue'
+import { registerWorkspaceFlush } from '../../src/renderer/src/editor/workspace-flush'
 import {
   clearActiveProject,
   setActiveProject
@@ -138,4 +139,37 @@ test('keeps brand navigation inside the workspace and disables actions without a
   for (const action of wrapper.findAll('.workspace-project-actions button')) {
     expect(action.attributes()).toHaveProperty('disabled')
   }
+})
+
+test('waits for every active chapter editor to flush before closing the project', async () => {
+  let resolveFlush!: (saved: boolean) => void
+  const flush = vi.fn(() => new Promise<boolean>((resolve) => {
+    resolveFlush = resolve
+  }))
+  const unregister = registerWorkspaceFlush(flush)
+  const close = vi.fn(async () => ok(null))
+  const { router, wrapper } = await mountLayout(createApi({ close }))
+
+  await button(wrapper, '关闭并返回项目中心').trigger('click')
+  expect(flush).toHaveBeenCalledTimes(1)
+  expect(close).not.toHaveBeenCalled()
+
+  resolveFlush(true)
+  await flushPromises()
+  expect(close).toHaveBeenCalledTimes(1)
+  expect(router.currentRoute.value.fullPath).toBe('/')
+  unregister()
+})
+
+test('does not create a backup when an active editor cannot flush', async () => {
+  const unregister = registerWorkspaceFlush(async () => false)
+  const backup = vi.fn(async () => ok(null))
+  const { wrapper } = await mountLayout(createApi({ backup }))
+
+  await button(wrapper, '创建备份').trigger('click')
+  await flushPromises()
+
+  expect(backup).not.toHaveBeenCalled()
+  expect(wrapper.get('[role="alert"]').text()).toContain('备份未完成')
+  unregister()
 })

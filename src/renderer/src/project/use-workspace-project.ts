@@ -36,7 +36,11 @@ export const clearActiveProject = (): void => {
   }
 }
 
-export function useWorkspaceProject(api: ProjectApi, onClosed: () => void) {
+export function useWorkspaceProject(
+  api: ProjectApi,
+  onClosed: () => void,
+  flushEditors: () => Promise<boolean> = async () => true
+) {
   const busyAction = ref<WorkspaceAction>(null)
   const showRenameForm = ref(false)
   const title = ref('')
@@ -100,13 +104,29 @@ export function useWorkspaceProject(api: ProjectApi, onClosed: () => void) {
 
   async function backupProject() {
     titleError.value = ''
-    await run('backing-up', () => api.backup(), (backup) => {
+    await run('backing-up', async () => {
+      if (!await flushEditors()) {
+        return {
+          ok: false as const,
+          error: { code: 'CHAPTER_OPERATION_FAILED' as const, message: 'Chapter draft flush failed' }
+        }
+      }
+      return api.backup()
+    }, (backup) => {
       if (backup !== null) status.value = '备份已创建并完成校验。'
     })
   }
 
   async function closeProject() {
-    await run('closing', () => api.close(), () => {
+    await run('closing', async () => {
+      if (!await flushEditors()) {
+        return {
+          ok: false as const,
+          error: { code: 'CHAPTER_OPERATION_FAILED' as const, message: 'Chapter draft flush failed' }
+        }
+      }
+      return api.close()
+    }, () => {
       clearActiveProject()
       onClosed()
     })

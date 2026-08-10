@@ -32,8 +32,34 @@ export const EXPECTED_AGENT_API_KEYS = [
   'resumeRun',
   'subscribeEvents'
 ]
+export const EXPECTED_PROJECT_API_KEYS = [
+  'backup',
+  'close',
+  'create',
+  'listRecent',
+  'open',
+  'openRecent',
+  'removeRecent',
+  'rename',
+  'restoreBackup'
+]
+export const EXPECTED_CHAPTER_API_KEYS = [
+  'confirmImport',
+  'confirmVersion',
+  'create',
+  'exportBook',
+  'list',
+  'listVersions',
+  'load',
+  'move',
+  'previewImport',
+  'remove',
+  'rename',
+  'restoreVersion',
+  'saveDraft'
+]
+export const EXPECTED_LIFECYCLE_API_KEYS = ['completeFlush', 'onFlushRequest']
 
-const EXPECTED_API_KEYS_JSON = JSON.stringify(EXPECTED_AGENT_API_KEYS)
 const SMOKE_INTERVAL_MS = 100
 const BUILD_TIMEOUT_MS = 120000
 const START_TIMEOUT_MS = 30000
@@ -77,6 +103,9 @@ const RECOVERY_EVENT_TYPES = [
 ]
 
 const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds))
+
+export const buildNamedApiInvokeExpression = (namespace, method, args) =>
+  `(async () => window.openNovel[${JSON.stringify(namespace)}][${JSON.stringify(method)}](...${JSON.stringify(args)}))()`
 
 export const buildAgentInvokeExpression = (method, args) =>
   `(async () => window.openNovel.agent[${JSON.stringify(method)}](...${JSON.stringify(args)}))()`
@@ -131,18 +160,35 @@ const installEventProbe = async (session) => {
   assert.equal(type, 'function', 'subscribeEvents must return an unsubscribe function')
 }
 
-const verifyAgentApi = async (session) => {
+const verifyNamedApi = async (session, namespace, expectedKeys, label) => {
+  const expectedKeysJson = JSON.stringify(expectedKeys)
   const keys = await waitFor(async () => {
-    const actual = await session.cdp.evaluate('Object.keys(window.openNovel?.agent ?? {}).sort()')
-    return JSON.stringify(actual) === EXPECTED_API_KEYS_JSON ? actual : undefined
-  }, 'the eight Preload Agent APIs', START_TIMEOUT_MS)
-  assert.deepEqual(keys, EXPECTED_AGENT_API_KEYS)
+    const actual = await session.cdp.evaluate(
+      `Object.keys(window.openNovel?.[${JSON.stringify(namespace)}] ?? {}).sort()`
+    )
+    return JSON.stringify(actual) === expectedKeysJson ? actual : undefined
+  }, label, START_TIMEOUT_MS)
+  assert.deepEqual(keys, expectedKeys)
 
   const allFunctions = await session.cdp.evaluate(`(() => {
-    const api = window.openNovel.agent
-    return ${JSON.stringify(EXPECTED_AGENT_API_KEYS)}.every((key) => typeof api[key] === 'function')
+    const api = window.openNovel[${JSON.stringify(namespace)}]
+    return ${expectedKeysJson}.every((key) => typeof api[key] === 'function')
   })()`)
-  assert.equal(allFunctions, true, 'all Preload Agent APIs must be functions')
+  assert.equal(allFunctions, true, `all ${namespace} Preload APIs must be functions`)
+}
+
+const verifyPreloadApis = async (session) => {
+  await verifyNamedApi(session, 'agent', EXPECTED_AGENT_API_KEYS, 'the eight Preload Agent APIs')
+  await verifyNamedApi(session, 'projects', EXPECTED_PROJECT_API_KEYS, 'the nine Preload Project APIs')
+  await verifyNamedApi(session, 'chapters', EXPECTED_CHAPTER_API_KEYS, 'the thirteen Preload Chapter APIs')
+  await verifyNamedApi(session, 'lifecycle', EXPECTED_LIFECYCLE_API_KEYS, 'the two Preload lifecycle APIs')
+
+  const recent = await session.cdp.evaluate(buildNamedApiInvokeExpression('projects', 'listRecent', []))
+  assert.equal(recent?.ok, true, 'projects.listRecent must succeed in an isolated profile')
+  assert.deepEqual(recent.data, [])
+  const chapters = await session.cdp.evaluate(buildNamedApiInvokeExpression('chapters', 'list', []))
+  assert.equal(chapters?.ok, false, 'chapters.list must fail safely before opening a project')
+  assert.equal(chapters?.error?.code, 'PROJECT_NOT_OPEN')
   await installEventProbe(session)
 }
 
@@ -165,7 +211,7 @@ const startSession = async (cwd, userDataDir, state) => {
     session.cdp.on('Runtime.exceptionThrown', () => {
       state.console.push('runtime.exceptionThrown')
     })
-    await verifyAgentApi(session)
+    await verifyPreloadApis(session)
     state.sessions.push(session)
     return session
   } catch (error) {

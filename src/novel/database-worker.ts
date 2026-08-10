@@ -7,6 +7,13 @@ export type SqlParameters = readonly (string | number | bigint | null | Uint8Arr
 export type TransactionStatement = {
   sql: string
   params?: SqlParameters
+  expectedChanges?: number
+}
+
+export type ReadStatement = {
+  type: 'get' | 'all'
+  sql: string
+  params?: SqlParameters
 }
 
 export type DatabaseHealth = {
@@ -22,6 +29,7 @@ type RpcOperation =
   | { type: 'all'; sql: string; params: SqlParameters }
   | { type: 'run'; sql: string; params: SqlParameters }
   | { type: 'transaction'; statements: TransactionStatement[] }
+  | { type: 'readTransaction'; statements: ReadStatement[] }
   | { type: 'health' }
   | { type: 'backup'; destination: string }
   | { type: 'close' }
@@ -102,10 +110,34 @@ const WORKER_SOURCE = String.raw`
         database.exec('BEGIN IMMEDIATE')
         try {
           for (const statement of operation.statements) {
-            execute({ type: 'run', sql: statement.sql, params: statement.params || [] })
+            const result = execute({ type: 'run', sql: statement.sql, params: statement.params || [] })
+            if (statement.expectedChanges != null && result.changes !== statement.expectedChanges) {
+              const mismatch = new Error('Unexpected affected row count')
+              mismatch.code = 'DATABASE_EXPECTED_CHANGES_MISMATCH'
+              throw mismatch
+            }
           }
           database.exec('COMMIT')
           data = undefined
+        } catch (error) {
+          try { database.exec('ROLLBACK') } catch {}
+          parentPort.postMessage({
+            type: 'result', id, ok: false,
+            code: error?.code === 'DATABASE_EXPECTED_CHANGES_MISMATCH'
+              ? 'DATABASE_EXPECTED_CHANGES_MISMATCH'
+              : 'DATABASE_TRANSACTION_FAILED'
+          })
+          return
+        }
+      } else if (operation.type === 'readTransaction') {
+        database.exec('BEGIN')
+        try {
+          data = operation.statements.map((statement) => execute({
+            type: statement.type,
+            sql: statement.sql,
+            params: statement.params || []
+          }))
+          database.exec('COMMIT')
         } catch {
           try { database.exec('ROLLBACK') } catch {}
           parentPort.postMessage({
@@ -226,6 +258,12 @@ export class DatabaseWorkerClient {
 
   async transaction(statements: readonly TransactionStatement[]): Promise<void> {
     await this.#call({ type: 'transaction', statements: [...statements] })
+  }
+
+  async readTransaction<T extends readonly unknown[]>(
+    statements: readonly ReadStatement[]
+  ): Promise<T> {
+    return this.#call({ type: 'readTransaction', statements: [...statements] }) as Promise<T>
   }
 
   async health(): Promise<DatabaseHealth> {

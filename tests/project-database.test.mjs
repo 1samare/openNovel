@@ -30,7 +30,7 @@ const hasCode = (code) => (error) => {
   return true
 }
 
-test('opens schema version one with durable SQLite pragmas in a worker', async (t) => {
+test('opens schema version two with durable SQLite pragmas and chapter tables in a worker', async (t) => {
   const sandbox = await mkdtemp(join(tmpdir(), 'open-novel-database-'))
 
   const client = await DatabaseWorkerClient.open(join(sandbox, 'project.sqlite3'))
@@ -41,7 +41,7 @@ test('opens schema version one with durable SQLite pragmas in a worker', async (
 
   assert.deepEqual(await client.health(), {
     quickCheck: 'ok',
-    userVersion: 1,
+    userVersion: 2,
     journalMode: 'wal',
     foreignKeys: 1,
     busyTimeout: 5000
@@ -53,10 +53,46 @@ test('opens schema version one with durable SQLite pragmas in a worker', async (
   `)
   assert.deepEqual(tables, [
     { name: 'audit_events' },
+    { name: 'chapter_drafts' },
+    { name: 'chapter_versions' },
+    { name: 'chapters' },
+    { name: 'export_jobs' },
+    { name: 'import_jobs' },
     { name: 'project_settings' },
     { name: 'projects' },
     { name: 'schema_migrations' }
   ])
+
+  const indexes = await client.all(`
+    SELECT name FROM sqlite_master
+    WHERE type = 'index' AND name LIKE 'idx_chapter%'
+    ORDER BY name
+  `)
+  assert.deepEqual(indexes, [
+    { name: 'idx_chapter_versions_chapter_created' },
+    { name: 'idx_chapters_project_parent_position' }
+  ])
+
+  const uniqueIndexes = await client.all(`
+    SELECT name FROM sqlite_master
+    WHERE type = 'index' AND name = 'uq_chapters_sibling_position'
+  `)
+  assert.deepEqual(uniqueIndexes, [{ name: 'uq_chapters_sibling_position' }])
+
+  await client.run(
+    'INSERT INTO projects (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)',
+    ['project-root-unique', '根节点唯一性', '2026-08-10T03:00:00.000Z', '2026-08-10T03:00:00.000Z']
+  )
+  await client.run(
+    `INSERT INTO chapters (id, project_id, parent_id, kind, title, position, created_at, updated_at)
+     VALUES (?, ?, NULL, 'chapter', ?, 0, ?, ?)`,
+    ['root-one', 'project-root-unique', '第一章', '2026-08-10T03:00:00.000Z', '2026-08-10T03:00:00.000Z']
+  )
+  await assert.rejects(client.run(
+    `INSERT INTO chapters (id, project_id, parent_id, kind, title, position, created_at, updated_at)
+     VALUES (?, ?, NULL, 'chapter', ?, 0, ?, ?)`,
+    ['root-two', 'project-root-unique', '第二章', '2026-08-10T03:00:00.000Z', '2026-08-10T03:00:00.000Z']
+  ), hasCode('DATABASE_WORKER_FAILED'))
 })
 
 test('rolls back a failed transaction without partially writing audit data', async (t) => {
@@ -82,6 +118,25 @@ test('rolls back a failed transaction without partially writing audit data', asy
   ]), hasCode('DATABASE_TRANSACTION_FAILED'))
 
   assert.deepEqual(await client.get('SELECT COUNT(*) AS count FROM audit_events'), { count: 0 })
+})
+
+test('distinguishes compare-and-swap mismatches from other transaction failures', async (t) => {
+  const sandbox = await mkdtemp(join(tmpdir(), 'open-novel-transaction-codes-'))
+  const client = await DatabaseWorkerClient.open(join(sandbox, 'project.sqlite3'))
+  t.after(async () => {
+    await client.close()
+    await rm(sandbox, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 })
+  })
+  await assert.rejects(client.transaction([{
+    sql: 'UPDATE projects SET title = title WHERE id = ?',
+    params: ['missing-project'],
+    expectedChanges: 1
+  }]), hasCode('DATABASE_EXPECTED_CHANGES_MISMATCH'))
+
+  await assert.rejects(client.transaction([{
+    sql: 'INSERT INTO projects (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)',
+    params: ['broken-project', null, '2026-08-10T00:00:00.000Z', '2026-08-10T00:00:00.000Z']
+  }]), hasCode('DATABASE_TRANSACTION_FAILED'))
 })
 
 test('does not advance user_version when a schema migration fails', async (t) => {

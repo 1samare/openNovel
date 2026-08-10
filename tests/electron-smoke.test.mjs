@@ -13,7 +13,11 @@ import {
 } from '../scripts/electron-smoke-cdp.mjs'
 import {
   buildAgentInvokeExpression,
-  EXPECTED_AGENT_API_KEYS
+  buildNamedApiInvokeExpression,
+  EXPECTED_AGENT_API_KEYS,
+  EXPECTED_CHAPTER_API_KEYS,
+  EXPECTED_LIFECYCLE_API_KEYS,
+  EXPECTED_PROJECT_API_KEYS
 } from '../scripts/electron-smoke.mjs'
 import * as smokeProcess from '../scripts/electron-smoke-process.mjs'
 
@@ -138,4 +142,16 @@ test('builds an isolated page expression for invoking a named Agent API', () => 
   assert.match(expression, /window\.openNovel\.agent/)
   assert.match(expression, /getRun/)
   assert.match(expression, /run-1/)
+
+  assert.deepEqual(EXPECTED_PROJECT_API_KEYS, [
+    'backup', 'close', 'create', 'listRecent', 'open', 'openRecent', 'removeRecent', 'rename', 'restoreBackup'
+  ])
+  assert.deepEqual(EXPECTED_CHAPTER_API_KEYS, [
+    'confirmImport', 'confirmVersion', 'create', 'exportBook', 'list', 'listVersions', 'load',
+    'move', 'previewImport', 'remove', 'rename', 'restoreVersion', 'saveDraft'
+  ])
+  assert.deepEqual(EXPECTED_LIFECYCLE_API_KEYS, ['completeFlush', 'onFlushRequest'])
+  const chapterExpression = buildNamedApiInvokeExpression('chapters', 'list', [])
+  assert.match(chapterExpression, /window\.openNovel\[['"]chapters['"]\]/)
+  assert.match(chapterExpression, /list/)
 })

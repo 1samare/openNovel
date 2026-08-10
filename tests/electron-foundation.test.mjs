@@ -38,23 +38,28 @@ test('生产入口为 Mock 流注入可中止的片段延迟', async () => {
   assert.match(source, /executorDelay:\s*delayMockChunk/)
 })
 
-test('预加载层仅暴露命名 Agent/Project 桥接且不暴露通用 Electron 或 Node API', async () => {
+test('预加载层仅暴露命名 Agent/Project/Chapter 桥接且不暴露通用 Electron 或 Node API', async () => {
   const source = await readProjectFile('src/preload/index.ts')
 
   assert.match(source, /contextBridge\.exposeInMainWorld\(\s*'openNovel'/)
   assert.match(source, /agent:\s*createAgentApi\(ipcRenderer\)/)
   assert.match(source, /projects:\s*createProjectApi\(ipcRenderer\)/)
+  assert.match(source, /chapters:\s*createChapterApi\(ipcRenderer\)/)
+  assert.match(source, /lifecycle:\s*createRendererFlushApi\(ipcRenderer\)/)
   assert.doesNotMatch(source, /exposeInMainWorld\(\s*['"](?:electron|ipcRenderer|node)['"]/)
   assert.doesNotMatch(source, /require\s*\(/)
   assert.match(source, /process\.contextIsolated/)
 })
 
-test('主进程组合项目数据库、固定 IPC 和异步退出等待', async () => {
+test('主进程组合项目与章节数据库、固定 IPC 和异步退出等待', async () => {
   const source = await readProjectFile('src/main/index.ts')
 
   assert.match(source, /ProjectService\.start/)
   assert.match(source, /registerProjectIpcHandlers/)
+  assert.match(source, /createChapterRuntime/)
+  assert.match(source, /registerChapterIpcHandlers/)
   assert.match(source, /createProjectShutdownGate/)
+  assert.match(source, /await flushActiveRenderers\(\)/)
   assert.match(source, /app\.on\('before-quit'/)
 })
 
@@ -62,7 +67,7 @@ test('控制数据库启动失败时显示安全恢复提示并清理后退出',
   const source = await readProjectFile('src/main/index.ts')
 
   assert.match(source, /应用启动失败/)
-  assert.match(source, /await shutdownProjectRuntime\(\)\.catch/)
+  assert.match(source, /await shutdownApplicationResources\(\)\.catch/)
   assert.match(source, /dialog\.showMessageBox\(\{[\s\S]*?安全退出/)
   assert.match(source, /app\.quit\(\)/)
 })

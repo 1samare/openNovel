@@ -81,6 +81,7 @@ test('registers only fixed handlers and rejects an unauthorized sender before ru
 
 test('uses system-selected or registered paths and confirms stale-lock recovery', async () => {
   const opened = []
+  const closeOrder = []
   let createSelections = 0
   let staleAttempts = 0
   const service = {
@@ -100,7 +101,7 @@ test('uses system-selected or registered paths and confirms stale-lock recovery'
       assert.equal(root === 'D:\\Selected\\Existing' ? recoverStaleLock : undefined, root === 'D:\\Selected\\Existing' ? true : undefined)
       return { ...summary, root }
     },
-    close: async () => undefined,
+    close: async () => { closeOrder.push('project') },
     rename: async (title) => ({ ...summary, title }),
     backup: async (root) => ({
       projectId: 'project-1',
@@ -128,7 +129,8 @@ test('uses system-selected or registered paths and confirms stale-lock recovery'
   const runtime = createProjectRuntime({
     service,
     dialogs,
-    senderPolicy: { appPageUrl: 'file:///app/renderer/index.html' }
+    senderPolicy: { appPageUrl: 'file:///app/renderer/index.html' },
+    beforeProjectClose: async () => { closeOrder.push('chapters') }
   })
 
   assert.deepEqual(await runtime.create('取消的新书'), { ok: true, data: null })
@@ -139,6 +141,8 @@ test('uses system-selected or registered paths and confirms stale-lock recovery'
   assert.deepEqual(opened, ['D:\\Selected\\Existing', 'D:\\Selected\\Existing', 'D:\\Novels\\Star'])
   assert.equal((await runtime.backup()).data.backupPath, 'D:\\Selected\\Backups')
   assert.equal((await runtime.restoreBackup()).data.root, 'D:\\Selected\\Restored')
+  assert.deepEqual(await runtime.close(), { ok: true, data: null })
+  assert.deepEqual(closeOrder, ['chapters', 'project'])
 })
 
 test('preload exposes only named project methods and rejects malformed bridge results', async () => {
@@ -218,6 +222,24 @@ test('normalizes thrown paths and waits for one asynchronous shutdown before qui
   failingGate({ preventDefault: () => undefined })
   await new Promise((resolve) => setImmediate(resolve))
   assert.deepEqual(shutdownOrder, ['reported', 'quit'])
+
+  let retryAttempts = 0
+  let retryQuitCalls = 0
+  const retryGate = createProjectShutdownGate({
+    shutdown: async () => {
+      retryAttempts += 1
+      if (retryAttempts === 1) throw new Error('renderer refused to flush')
+    },
+    onFailure: async () => false,
+    requestQuit: () => { retryQuitCalls += 1 }
+  })
+  retryGate(event)
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.equal(retryQuitCalls, 0)
+  retryGate(event)
+  await new Promise((resolve) => setImmediate(resolve))
+  assert.equal(retryAttempts, 2)
+  assert.equal(retryQuitCalls, 1)
 
   const runtime = createProjectRuntime({
     service: {

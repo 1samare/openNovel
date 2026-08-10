@@ -15,11 +15,12 @@
 - `agent-orchestrator.test.mjs`：使用内存仓储和可控离线执行器验证严格事件序列、审批持久化/恢复原子边界、queued 启动恢复、legacy final checkpoint 审批证明修正、监听器快照隔离、陈旧 list 不覆盖权威状态、仓储错误与列表诊断传播、Mock Executor 的分析/final chunk 选择与进行中中止、取消竞态、事件回补及恢复检查点去重。
 - `agent-ipc.test.mjs`：验证 Agent IPC 命令参数、仅 hash 可变的完整 production file URL、开发 origin/凭据/销毁 frame sender 守卫、固定且幂等的处理器/disposer、错误脱敏、Preload 事件克隆隔离、结构化日志脱敏、恢复/窗口附着生命周期，以及 runtime 向 Mock Executor 传递受控 delay。
 - `agent-harness.test.mjs`：行为化验证渲染层先订阅后加载、加载竞态合并、序列缺口回补/去重/刷新、连续 `run.failed` 的安全详情回读与刷新重试、拒绝规范化、操作级重试、命令锁、陈旧结果隔离、队列恢复与退订，并结合控制器状态和页面契约检查可访问控件、流式 final、失败诊断和 520px 顶栏命中区。
-- `electron-smoke.test.mjs`：验证生产 smoke 的事件序列连续性、delta 去重、诊断脱敏、CDP target 选择、Windows npm CLI 调用、Electron 启动参数和进程树清理参数；不启动真实窗口。
+- `electron-smoke.test.mjs`：验证生产 smoke 的 Agent/Project/Chapter/Lifecycle 精确桥接、事件序列连续性、delta 去重、诊断脱敏、CDP target 选择、Windows npm CLI 调用、Electron 启动参数和进程树清理参数；不启动真实窗口。
 - `project-paths.test.mjs`：使用真实临时目录验证项目根路径、目录占用、严格原子 manifest、活动写锁、需确认的陈旧锁恢复、同时恢复的唯一所有权，以及死亡或未完整写入的 recovery claim 回收。
 - `project-database.test.mjs`：使用真实 SQLite 文件和受控 Worker 验证 RPC、schema v1、pragma、事务/迁移回滚、事件循环响应、正常关闭，以及 ready 前/后的异常退出均稳定失败。
 - `project-lifecycle.test.mjs`：使用真实目录、SQLite 和两个 service 验证新建重启、重命名及 control 失败补偿、最近项目完整文件可用性、备份恢复、迁移失败后从一致快照恢复、跨实例写锁、同 service 生命周期串行、失败逆序清理和递归路径拒绝。
 - `project-ipc.test.mjs`：验证固定项目命令、sender/参数守卫、系统选择/最近路径授权、陈旧锁确认、preload 最小桥接、错误脱敏、异步退出等待与关闭失败先提示后退出。
+- `renderer-flush.test.mjs`：验证退出前保存握手的固定事件、preload 最小桥接、sender/请求归属校验、拒绝、超时、释放和可重试退出门禁。
 - `ui/`：使用 Vitest、Vue Test Utils 和 happy-dom 执行 Vue 单文件组件测试，独立于现有 Node Test Runner 测试。
 
 ## 依赖边界
@@ -34,6 +35,25 @@
 
 - 2026-08-10：隔离 README push 基准测试继承的 PR 环境变量，确保 `GITHUB_EVENT_BEFORE` 场景在本地与 GitHub Actions 中一致。
 - 2026-08-10：备份恢复生命周期测试使用 `realpath` 规范化 Windows 8.3/长路径别名，保持本地与 GitHub runner 断言一致。
+- 2026-08-10：阶段 2 增加共享章节契约、Unicode 正文字数和 project schema v2 的首组 RED 测试。
+- 2026-08-10：增加章节树排序、草稿乐观 revision、不可变版本恢复与 300 章规模的领域 RED 测试。
+- 2026-08-10：增加 TXT/Markdown 导入预览、事务确认与统一导出快照的 RED 测试。
+- 2026-08-10：增加 `.opennovel.zip` 内容白名单、哈希校验和不覆盖目标的真实文件 RED 测试。
+- 2026-08-10：增加章节固定 IPC 参数、sender 授权与 preload 响应守卫 RED 测试。
+- 2026-08-10：增加主进程系统文件选择、预览防篡改、参考资料确认、统一导出与安全未打开状态的 runtime RED 测试。
+- 2026-08-10：增加章节编辑器自动保存、切换刷盘、版本、导入预览确认和三格式导出的渲染层 RED 测试。
+- 2026-08-10：增加工作台关闭项目前等待活动编辑器刷盘的渲染层回归测试。
+- 2026-08-10：补充 CodeMirror 中文组合输入、选区回调、搜索替换、全屏退出与只读历史预览回归测试。
+- 2026-08-10：独立复审补充路由离开与创建备份不得丢失 800ms 窗口内正文的 RED 测试。
+- 2026-08-10：独立复审补充真正并发草稿 CAS 只能一个成功，以及根章节 position 数据库唯一性 RED 测试。
+- 2026-08-10：独立复审补充 fatal UTF-8、粘贴 Markdown 拆章、真实历史状态和永久删除提示 RED 测试。
+- 2026-08-10：独立复审补充 ZIP 高压缩比与缺少必需项目文件必须在解压/恢复前安全拒绝的 RED 测试。
+- 2026-08-10：独立复审补充主进程退出前必须等待授权渲染器保存确认，拒绝或超时后可返回继续保存的 RED 测试。
+- 2026-08-10：独立复审补充分卷选择、重命名、同级排序、受保护删除和章节跨卷移动的 UI RED 测试。
+- 2026-08-10：将 Project、Chapter 与 Lifecycle 精确桥接键和安全未打开结果纳入生产 Electron smoke 契约。
+- 2026-08-10：二次复审补充章节加载/版本恢复请求期间输入保留、快速选择代次、明确放弃强制销毁窗口，以及 CAS 与真实事务故障分码的 RED 测试。
+- 2026-08-10：复核终稿要求版本恢复响应虽不覆盖新输入，仍须采纳数据库新 revision，证明后续 flush 不产生伪 CAS 冲突。
+
 - 2026-07-28：新增 README 目录契约行为测试。
 - 2026-07-28：补充祖先目录、精确标题和 push 基准回归测试。
 - 2026-07-28：新增 Agent 公共契约、运行时校验和状态机的行为测试。

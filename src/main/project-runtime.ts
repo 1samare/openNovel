@@ -70,6 +70,7 @@ export const createProjectRuntime = (options: {
   service: ProjectServicePort
   dialogs: Partial<ProjectDialogs>
   senderPolicy: AgentSenderPolicy
+  beforeProjectClose?(): Promise<void>
 }): ProjectRuntime => {
   const run = async <T>(operation: () => Promise<T>): Promise<ProjectResult<T>> => {
     try {
@@ -119,6 +120,7 @@ export const createProjectRuntime = (options: {
       return openPath(recent.projectPath)
     }),
     close: () => run(async () => {
+      await options.beforeProjectClose?.()
       await options.service.close()
       return null
     }),
@@ -146,7 +148,7 @@ export const createProjectRuntime = (options: {
 export const createProjectShutdownGate = (options: {
   shutdown(): Promise<void>
   requestQuit(): void
-  onFailure?(error: unknown): void | Promise<void>
+  onFailure?(error: unknown): boolean | void | Promise<boolean | void>
 }): ((event: { preventDefault(): void }) => void) => {
   let completed = false
   let running = false
@@ -156,8 +158,21 @@ export const createProjectShutdownGate = (options: {
     if (running) return
     running = true
     void options.shutdown()
-      .catch(async (error) => options.onFailure?.(error))
-      .finally(() => {
+      .then(() => {
+        completed = true
+        options.requestQuit()
+      })
+      .catch(async (error) => {
+        let shouldQuit = true
+        try {
+          shouldQuit = (await options.onFailure?.(error)) !== false
+        } catch {
+          shouldQuit = true
+        }
+        if (!shouldQuit) {
+          running = false
+          return
+        }
         completed = true
         options.requestQuit()
       })

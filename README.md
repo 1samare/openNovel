@@ -1,6 +1,6 @@
 # OpenNovel
 
-OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应用。本仓库已交付 Electron + Vue 3 + TypeScript 基础架构和首个离线 Agent Harness 垂直闭环；`feat/v1.0` 的阶段 1 独立项目、本地数据库与项目生命周期已完成实现、退出门禁、用户确认与远端推送，真实模型调用仍不在当前阶段。
+OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应用。本仓库已交付 Electron + Vue 3 + TypeScript 基础架构、离线 Agent Harness、独立项目生命周期，以及阶段 2 的章节编辑、版本与本地文件交换；阶段 2 已通过本地退出门禁，等待用户确认后推送，真实模型调用仍不在当前阶段。
 
 ## 目录用途
 
@@ -85,7 +85,13 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 
 - 2026-08-10：用户确认阶段 1 完成；阶段提交已普通快进推送到 `origin/feat/v1.0@1a73a03`，upstream 与 ahead/behind 核对为 0/0。
 
+- 2026-08-10：阶段 2 从 `feat/v1.0@be94336` 开工，远端 0/0，按共享契约、SQLite schema、章节服务、文件交换、固定 IPC 与 CodeMirror 纵向切片实施。
+
+- 2026-08-10：阶段 2 首个检查点完成：project schema v2、章节/草稿共享契约与 Unicode 正文字数聚焦回归 23/23。
+
 - 2026-08-10：将开发环境与 Windows Quality 的 Node 下限修正为 22.13，确保 `node:sqlite` 无需实验开关即可用于数据库测试。
+
+- 2026-08-10：阶段 2 完成章节树/分卷组织、CodeMirror 纯文本编辑、不可变版本、800ms 安全保存、三格式导出、TXT/Markdown 导入和可校验项目归档；两轮独立复审及最终 Node 153/UI 23/生产验收通过，进入用户确认门禁。
 
 ## 技术栈
 
@@ -152,22 +158,22 @@ docs/            按日期归档的设计和修改计划
 已经具备：
 
 - Electron 窗口和应用生命周期；
-- 隔离的渲染进程，以及仅暴露命名 `window.openNovel.agent` 与 `window.openNovel.projects` 方法的预加载边界；
+- 隔离的渲染进程，以及仅暴露命名 Agent、Project、Chapter 与退出保存 Lifecycle 方法的预加载边界；
 - Vue 应用、Hash Router 和公共工作台布局；
 - 本地优先项目中心：新建/打开独立小说项目、最近项目、缺失路径恢复与仅移除记录；产品其余一级模块占位页面；
-- 每项目独立目录、严格 manifest、SQLite Worker/schema v1、单写者锁、一致备份/恢复，以及工作台重命名、备份和安全关闭；
+- 每项目独立目录、严格 manifest、SQLite Worker/schema v2、单写者锁、可校验 `.opennovel.zip` 备份/恢复，以及工作台重命名、备份和安全关闭；
+- 可维护分卷/章节层级的章节树、CodeMirror 6 编辑器、800ms 自动保存、切章/备份/退出刷盘、不可变确认版本与历史恢复；
+- UTF-8 TXT/Markdown/paste 导入预览与事务确认，以及来自同一数据库快照的 TXT、Markdown、无宏 DOCX 导出；
 - Agent Run 的公共契约、运行时校验和纯状态机；
 - 每 Run 一份 schema v1 JSON 的原子持久化、损坏记录隔离、事件补取和 analysis/final 检查点恢复；
 - `/workspace/chat` 的 Harness Agent 工作台：可创建 Run、查看有节奏的本地 Mock 流与时间线、审批、运行中取消、重启后恢复、本地损坏记录诊断及连续失败事件的持久化安全详情；
 - 沙箱化 CommonJS Preload、固定 Agent IPC 白名单、来源校验和不记录正文的结构化日志；
 - TypeScript 类型检查、结构测试和生产构建命令。
-- Windows 生产 Electron smoke：真实验证 Preload Agent 八 API、流式审批、运行中取消、重启恢复、事件连续性和本次进程树清理。
+- Windows 生产 Electron smoke：精确验证 Agent 8、Project 9、Chapter 13、Lifecycle 2 个命名 API，以及流式审批、运行中取消、重启恢复、事件连续性和本次进程树清理。
 
 尚未实现：
 
-- 章节树、正文内容、版本与文件交换；
 - 真实 AI 模型配置、调用、任意工具和自定义 Skill；
-- 正文编辑器、版本管理和导入导出；
 - 应用安装包生成。
 
 当前 Harness 为单用户、单窗口的 M0 实现，使用确定性 Mock 文本；Prompt、事件和输出以本地明文 JSON 保存在 Electron `userData/agent-runs`，尚未提供加密、清理界面或跨设备同步。

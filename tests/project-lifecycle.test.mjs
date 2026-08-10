@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { access, mkdtemp, readdir, realpath, rename, rm } from 'node:fs/promises'
+import { access, mkdtemp, mkdir, readFile, readdir, realpath, rename, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import test from 'node:test'
@@ -102,7 +102,10 @@ test('creates a verified backup and restores it into an empty destination', asyn
   })
 
   const created = await service.create({ root: projectRoot, title: '逆光列车' })
+  await mkdir(join(projectRoot, 'attachments', 'notes'))
+  await writeFile(join(projectRoot, 'attachments', 'notes', '场景.txt'), '站台与雨。', 'utf8')
   const backup = await service.backup(externalBackups)
+  assert.match(backup.backupPath, /\.opennovel\.zip$/)
   await service.close()
   await rm(projectRoot, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 })
 
@@ -118,6 +121,7 @@ test('creates a verified backup and restores it into an empty destination', asyn
   assert.equal((await service.listRecent())[0].projectPath, canonicalRestoredRoot)
   await access(join(restoredRoot, 'attachments'))
   await access(join(restoredRoot, 'project.sqlite3'))
+  assert.equal(await readFile(join(restoredRoot, 'attachments', 'notes', '场景.txt'), 'utf8'), '站台与雨。')
 })
 
 test('preserves a pre-migration backup when opening an invalid version zero database', async (t) => {
@@ -158,7 +162,7 @@ test('restores a consistent pre-migration snapshot after a transient migration f
   const projectMigrations = [
     ...PROJECT_MIGRATIONS,
     {
-      version: 2,
+      version: 3,
       name: 'test-project-title-index',
       sql: 'CREATE INDEX project_title_index ON projects(title);'
     }
@@ -175,11 +179,11 @@ test('restores a consistent pre-migration snapshot after a transient migration f
   const created = await service.create({ root: projectRoot, title: '迁移恢复' })
   await service.close()
   const databasePath = join(projectRoot, 'project.sqlite3')
-  const prepareVersionOne = await DatabaseWorkerClient.open(databasePath, [])
-  await prepareVersionOne.run('DROP INDEX project_title_index')
-  await prepareVersionOne.run('DELETE FROM schema_migrations WHERE version = 2')
-  await prepareVersionOne.run('PRAGMA user_version = 1')
-  await prepareVersionOne.close()
+  const prepareVersionTwo = await DatabaseWorkerClient.open(databasePath, [])
+  await prepareVersionTwo.run('DROP INDEX project_title_index')
+  await prepareVersionTwo.run('DELETE FROM schema_migrations WHERE version = 3')
+  await prepareVersionTwo.run('PRAGMA user_version = 2')
+  await prepareVersionTwo.close()
 
   const blocker = new DatabaseSync(databasePath)
   blocker.exec('PRAGMA journal_mode = WAL; BEGIN IMMEDIATE')
@@ -201,7 +205,7 @@ test('restores a consistent pre-migration snapshot after a transient migration f
   assert.equal(restored.projectId, created.projectId)
   assert.equal(restored.title, '迁移恢复')
   const restoredDatabase = await DatabaseWorkerClient.open(join(restoredRoot, 'project.sqlite3'), [])
-  assert.equal((await restoredDatabase.health()).userVersion, 2)
+  assert.equal((await restoredDatabase.health()).userVersion, 3)
   await restoredDatabase.close()
 })
 
@@ -376,7 +380,8 @@ test('removes a finalized backup when control metadata persistence fails', async
 
   await controlFault.run('DROP TRIGGER fail_backup_metadata')
   const backup = await service.backup(backupRoot)
-  await access(join(backup.backupPath, 'project.sqlite3'))
+  assert.match(backup.backupPath, /\.opennovel\.zip$/)
+  await access(backup.backupPath)
 })
 
 test('rejects backup and restore destinations nested inside their source data', async (t) => {

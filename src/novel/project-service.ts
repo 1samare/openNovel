@@ -18,6 +18,11 @@ import {
   type ProjectSummary,
   type RecentProjectSummary
 } from '../shared/project.ts'
+import {
+  createProjectArchive,
+  extractProjectArchive,
+  inspectProjectArchive
+} from '../export/project-archive.ts'
 import { DatabaseWorkerClient } from './database-worker.ts'
 import {
   acquireProjectLock,
@@ -297,38 +302,30 @@ export class ProjectService {
     }
     await mkdir(destination, { recursive: true })
     const name = `backup-${safeTimestamp(createdAt)}-${this.#dependencies.createId()}`
-    const temporary = join(destination, `.${name}.tmp`)
-    const finalPath = join(destination, name)
+    const temporaryDatabase = join(destination, `.${name}.sqlite.tmp`)
+    const finalPath = join(destination, `${name}.opennovel.zip`)
     let finalized = false
     try {
-      await mkdir(temporary)
-      await copyFile(active.paths.manifest, join(temporary, 'open-novel.json'))
-      await copyAttachments(active.paths.attachments, join(temporary, 'attachments'))
-      await active.repository.backupTo(join(temporary, 'project.sqlite3'))
-      let verification: DatabaseWorkerClient | undefined
-      let quickCheck = ''
-      try {
-        verification = await DatabaseWorkerClient.open(join(temporary, 'project.sqlite3'), [])
-        quickCheck = (await verification.health()).quickCheck
-      } finally {
-        await verification?.close()
-      }
-      if (quickCheck !== 'ok') {
-        throw new ProjectDomainError('PROJECT_BACKUP_FAILED', 'Backup database check failed')
-      }
-      await renamePath(temporary, finalPath)
+      await active.repository.backupTo(temporaryDatabase)
+      await createProjectArchive({
+        projectRoot: active.paths.root,
+        databaseSnapshotPath: temporaryDatabase,
+        destinationFile: finalPath,
+        projectId: active.summary.projectId,
+        createdAt
+      })
       finalized = true
       await this.#control.setBackup(active.summary.projectId, finalPath)
       return { projectId: active.summary.projectId, backupPath: finalPath, createdAt }
     } catch (error) {
-      await rm(temporary, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 })
-        .catch(() => undefined)
+      await unlink(temporaryDatabase).catch(() => undefined)
       if (finalized) {
-        await rm(finalPath, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 })
-          .catch(() => undefined)
+        await unlink(finalPath).catch(() => undefined)
       }
       if (error instanceof ProjectDomainError) throw error
       throw new ProjectDomainError('PROJECT_BACKUP_FAILED', 'Project backup failed')
+    } finally {
+      await unlink(temporaryDatabase).catch(() => undefined)
     }
   }
 
@@ -352,22 +349,27 @@ export class ProjectService {
         'Backup source and restore destination cannot overlap'
       )
     }
-    const manifest = await readProjectManifest(backupRoot).catch(() => {
-      throw new ProjectDomainError('INVALID_PROJECT_BACKUP', 'Backup manifest is invalid')
+    const sourceDetails = await stat(backupRoot).catch(() => {
+      throw new ProjectDomainError('INVALID_PROJECT_BACKUP', 'Backup source does not exist')
     })
-    const backupDatabase = join(backupRoot, 'project.sqlite3')
-    let verification: DatabaseWorkerClient | undefined
-    try {
-      verification = await DatabaseWorkerClient.open(backupDatabase, [])
-      const health = await verification.health()
-      if (health.quickCheck !== 'ok') {
-        throw new ProjectDomainError('INVALID_PROJECT_BACKUP', 'Backup database is invalid')
+    const directoryBackup = sourceDetails.isDirectory()
+    let backupProjectId: string
+    if (directoryBackup) {
+      const manifest = await readProjectManifest(backupRoot).catch(() => {
+        throw new ProjectDomainError('INVALID_PROJECT_BACKUP', 'Backup manifest is invalid')
+      })
+      backupProjectId = manifest.projectId
+      let verification: DatabaseWorkerClient | undefined
+      try {
+        verification = await DatabaseWorkerClient.open(join(backupRoot, 'project.sqlite3'), [])
+        if ((await verification.health()).quickCheck !== 'ok') {
+          throw new ProjectDomainError('INVALID_PROJECT_BACKUP', 'Backup database is invalid')
+        }
+      } finally {
+        await verification?.close().catch(() => undefined)
       }
-    } catch (error) {
-      if (error instanceof ProjectDomainError) throw error
-      throw new ProjectDomainError('INVALID_PROJECT_BACKUP', 'Backup database is invalid')
-    } finally {
-      await verification?.close().catch(() => undefined)
+    } else {
+      backupProjectId = (await inspectProjectArchive(backupRoot)).projectId
     }
 
     let destinationExisted = true
@@ -384,12 +386,20 @@ export class ProjectService {
         mkdir(paths.backups),
         mkdir(paths.exports)
       ])
-      await copyFile(join(backupRoot, 'open-novel.json'), paths.manifest)
-      await copyFile(backupDatabase, paths.database)
-      await copyAttachments(join(backupRoot, 'attachments'), paths.attachments)
+      if (directoryBackup) {
+        await copyFile(join(backupRoot, 'open-novel.json'), paths.manifest)
+        await copyFile(join(backupRoot, 'project.sqlite3'), paths.database)
+        await copyAttachments(join(backupRoot, 'attachments'), paths.attachments)
+      } else {
+        await extractProjectArchive(backupRoot, destinationRoot)
+      }
+      const manifest = await readProjectManifest(destinationRoot)
+      if (manifest.projectId !== backupProjectId) {
+        throw new ProjectDomainError('INVALID_PROJECT_BACKUP', 'Backup project identity changed')
+      }
       return await this.#open({ root: destinationRoot }, backupRoot)
     } catch (error) {
-      if (this.#active?.summary.projectId !== manifest.projectId) {
+      if (this.#active?.summary.projectId !== backupProjectId) {
         await this.#cleanupFailedCreate(paths, destinationExisted)
       }
       throw error

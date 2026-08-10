@@ -2,6 +2,7 @@
 import { useRouter } from 'vue-router'
 import { APP_NAME } from '@shared/app'
 import { navigationItems } from '@renderer/navigation/items'
+import { flushWorkspaceEditors } from '@renderer/editor/workspace-flush'
 import { useWorkspaceProject } from '../project/use-workspace-project'
 
 const router = useRouter()
@@ -20,7 +21,7 @@ const {
   titleError
 } = useWorkspaceProject(window.openNovel.projects, () => {
   void router.push('/')
-})
+}, flushWorkspaceEditors)
 </script>
 
 <template>
