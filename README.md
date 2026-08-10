@@ -85,6 +85,8 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 
 - 2026-08-10：用户确认阶段 1 完成；阶段提交已普通快进推送到 `origin/feat/v1.0@1a73a03`，upstream 与 ahead/behind 核对为 0/0。
 
+- 2026-08-10：将开发环境与 Windows Quality 的 Node 下限修正为 22.13，确保 `node:sqlite` 无需实验开关即可用于数据库测试。
+
 ## 技术栈
 
 - Electron
@@ -98,7 +100,7 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 ## 环境要求
 
 - Windows 10 或更高版本
-- Node.js 22.12 或更高版本
+- Node.js 22.13 或更高版本
 - npm 10 或更高版本
 
 ## 本地运行
