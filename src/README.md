@@ -10,6 +10,7 @@
 - `preload/`：受限的预加载安全边界，仅桥接命名 Agent API。
 - `renderer/`：渲染进程入口与 Vue 应用。
 - `shared/`：跨进程共享的纯类型和常量。
+- `novel/`：独立小说项目的路径、manifest、SQLite Worker、仓储和生命周期领域边界。
 
 ## 依赖边界
 
@@ -25,3 +26,4 @@
 - 2026-07-28：补充 Agent 主进程 IPC/运行时与最小预加载桥接的目录职责。
 - 2026-07-28：补充 Agent IPC 恢复时序、窗口转发生命周期与构建 preload 工件职责。
 - 2026-07-28：补充 Agent production file sender 的完整 URL hash 路由匹配边界。
+- 2026-08-07：建立阶段 1 小说项目领域目录，并加入安全路径、原子 manifest 与项目写锁边界。
