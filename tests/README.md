@@ -15,10 +15,18 @@
 - `agent-orchestrator.test.mjs`：使用内存仓储和可控离线执行器验证严格事件序列、审批持久化/恢复原子边界、queued 启动恢复、legacy final checkpoint 审批证明修正、监听器快照隔离、陈旧 list 不覆盖权威状态、仓储错误与列表诊断传播、Mock Executor 的分析/final chunk 选择与进行中中止、取消竞态、事件回补及恢复检查点去重。
 - `agent-ipc.test.mjs`：验证 Agent IPC 命令参数、仅 hash 可变的完整 production file URL、开发 origin/凭据/销毁 frame sender 守卫、固定且幂等的处理器/disposer、错误脱敏、Preload 事件克隆隔离、结构化日志脱敏、恢复/窗口附着生命周期，以及 runtime 向 Mock Executor 传递受控 delay。
 - `agent-harness.test.mjs`：行为化验证渲染层先订阅后加载、加载竞态合并、序列缺口回补/去重/刷新、连续 `run.failed` 的安全详情回读与刷新重试、拒绝规范化、操作级重试、命令锁、陈旧结果隔离、队列恢复与退订，并结合控制器状态和页面契约检查可访问控件、流式 final、失败诊断和 520px 顶栏命中区。
-- `electron-smoke.test.mjs`：验证生产 smoke 的 Agent/Project/Chapter/Lifecycle 精确桥接、事件序列连续性、delta 去重、诊断脱敏、CDP target 选择、Windows npm CLI 调用、Electron 启动参数和进程树清理参数；不启动真实窗口。
+- `electron-smoke.test.mjs`：验证生产 smoke 的 Agent/Project/Chapter/Model/Lifecycle 精确桥接、事件序列连续性、delta 去重、诊断脱敏、CDP target 选择、Windows npm CLI 调用、Electron 启动参数、进程树清理参数与持久化模型产物明文拒绝；不启动真实窗口。
 - `project-paths.test.mjs`：使用真实临时目录验证项目根路径、目录占用、严格原子 manifest、活动写锁、需确认的陈旧锁恢复、同时恢复的唯一所有权，以及死亡或未完整写入的 recovery claim 回收。
-- `project-database.test.mjs`：使用真实 SQLite 文件和受控 Worker 验证 RPC、schema v1、pragma、事务/迁移回滚、事件循环响应、正常关闭，以及 ready 前/后的异常退出均稳定失败。
-- `project-lifecycle.test.mjs`：使用真实目录、SQLite 和两个 service 验证新建重启、重命名及 control 失败补偿、最近项目完整文件可用性、备份恢复、迁移失败后从一致快照恢复、跨实例写锁、同 service 生命周期串行、失败逆序清理和递归路径拒绝。
+- `project-database.test.mjs`：使用真实 SQLite 文件和受控 Worker 验证 RPC、project schema v1–v3、pragma、事务/迁移回滚、事件循环响应、正常关闭，以及 ready 前/后的异常退出均稳定失败。
+- `model-contract.test.mjs`：验证阶段 3 固定模型 IPC 参数、角色所需能力、公开结果密钥字段拒绝，以及 project v3/control v2 的真实 SQLite 迁移表。
+- `model-secret-store.test.mjs`：使用真实临时目录验证操作系统加密不可用拒绝、密文原子替换/恢复/删除，以及 Provider URL、协议降级和跨 origin 凭据转发边界。
+- `model-repository.test.mjs`：使用真实 control/project SQLite 和密钥目录验证连接脱敏、档案/绑定重启持久化、空 Key 保留以及能力与跨供应商显式确认门禁。
+- `model-provider-adapters.test.mjs`：用三类原生协议的回环 fake server 验证 AI SDK 连接测试、流式文本、结构化输出、usage/request ID、可选模型列表和安全失败边界。
+- `model-gateway.test.mjs`：验证 Profile/连接/密钥解析、能力先验门禁、稳定错误矩阵、有限抖动重试、流开始后不重放、启发式 token 估算和真实 SQLite 白名单日志。
+- `model-ipc.test.mjs`：验证模型九命令的精确参数、sender 白名单、请求 ID 锁、连接测试取消、关闭等待、脱敏 preload 校验及 safeStorage 生产组合顺序。
+- `model-security.test.mjs`：使用唯一 BYOK sentinel 扫描真实 control/project SQLite、备份 ZIP 及解包内容、章节导出、调用日志、公开 IPC 返回和加密密钥文件，证明无密钥明文泄漏。
+- `ui/model-settings.spec.ts`：挂载真实模型设置页，验证 BYOK 脱敏、DeepSeek 预设、连接/Profile 表单、三模式六角色绑定、能力门禁和跨供应商显式确认。
+- `project-lifecycle.test.mjs`：使用真实目录、SQLite 和两个 service 验证新建重启、重命名及 control 失败补偿、最近项目完整文件可用性、备份恢复、临时 v4 迁移失败后从一致快照恢复、跨实例写锁、同 service 生命周期串行、失败逆序清理和递归路径拒绝。
 - `project-ipc.test.mjs`：验证固定项目命令、sender/参数守卫、系统选择/最近路径授权、陈旧锁确认、preload 最小桥接、错误脱敏、异步退出等待与关闭失败先提示后退出。
 - `renderer-flush.test.mjs`：验证退出前保存握手的固定事件、preload 最小桥接、sender/请求归属校验、拒绝、超时、释放和可重试退出门禁。
 - `ui/`：使用 Vitest、Vue Test Utils 和 happy-dom 执行 Vue 单文件组件测试，独立于现有 Node Test Runner 测试。
@@ -33,6 +41,16 @@
 
 ## 变更同步
 
+- 2026-08-10：阶段 3 首组 RED/GREEN 覆盖共享模型契约、角色能力门禁、脱敏结果和 project v3/control v2 实际迁移。
+- 2026-08-10：阶段 3 密钥与 URL RED/GREEN 覆盖加密可用性、密文原子性、不安全 Base URL/重定向和跨 origin 授权头移除。
+- 2026-08-10：阶段 3 持久化 RED/GREEN 覆盖连接/Profile/项目绑定重启、公开脱敏、能力门禁、跨供应商确认，并把生命周期故障夹具推进到临时 v4 迁移。
+- 2026-08-10：阶段 3 Provider Adapter RED 覆盖 OpenAI-compatible、Anthropic 与 Gemini 原生请求/响应、结构化 schema、错误矩阵及取消；测试只监听回环地址。
+- 2026-08-10：阶段 3 Gateway RED 覆盖模型解析、调用前能力阻断、全部稳定错误码、瞬时故障重试、流重放边界和无内容调用日志持久化。
+- 2026-08-10：阶段 3 主进程/IPC/Preload RED 覆盖固定九命令、非顶层/错误来源拒绝、畸形返回、重复测试锁、取消和关闭资源顺序。
+- 2026-08-10：阶段 3 渲染 RED 覆盖模型设置的密钥不回显、连接测试取消、档案校验和角色路由门禁。
+- 2026-08-10：阶段 3 新增全路径密钥泄漏测试，覆盖真实持久化、备份/导出、日志、公开桥接结果与密文文件。
+- 2026-08-10：阶段 3 生产 smoke 新增 Model 九方法桥接、回环 Provider、safeStorage 密钥、连接测试、模型列表与重启持久化覆盖。
+- 2026-08-10：终轮复核新增重启后密钥再解密认证与清理前模型产物明文扫描，并覆盖模式默认路由的能力不足选项禁用。
 - 2026-08-10：隔离 README push 基准测试继承的 PR 环境变量，确保 `GITHUB_EVENT_BEFORE` 场景在本地与 GitHub Actions 中一致。
 - 2026-08-10：备份恢复生命周期测试使用 `realpath` 规范化 Windows 8.3/长路径别名，保持本地与 GitHub runner 断言一致。
 - 2026-08-10：阶段 2 增加共享章节契约、Unicode 正文字数和 project schema v2 的首组 RED 测试。

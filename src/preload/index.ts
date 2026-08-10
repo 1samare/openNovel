@@ -3,6 +3,7 @@ import { createAgentApi } from './agent-api.ts'
 import { createProjectApi } from './project-api.ts'
 import { createChapterApi } from './chapter-api.ts'
 import { createRendererFlushApi } from './renderer-flush-api.ts'
+import { createModelApi } from './model-api.ts'
 
 if (!process.contextIsolated) {
   console.error('Preload isolation is disabled')
@@ -11,6 +12,7 @@ if (!process.contextIsolated) {
     agent: createAgentApi(ipcRenderer),
     projects: createProjectApi(ipcRenderer),
     chapters: createChapterApi(ipcRenderer),
+    models: createModelApi(ipcRenderer),
     lifecycle: createRendererFlushApi(ipcRenderer)
   })
 }

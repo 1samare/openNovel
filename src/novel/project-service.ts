@@ -18,6 +18,7 @@ import {
   type ProjectSummary,
   type RecentProjectSummary
 } from '../shared/project.ts'
+import type { ModelBindingConfiguration } from '../shared/model.ts'
 import {
   createProjectArchive,
   extractProjectArchive,
@@ -412,6 +413,22 @@ export class ProjectService {
 
   removeRecent(projectId: string): Promise<void> {
     return this.#serialize(() => this.#control.remove(projectId))
+  }
+
+  listModelBindings(): Promise<ModelBindingConfiguration> {
+    return this.#serialize(() => this.#requireActive().repository.listModelBindings())
+  }
+
+  saveModelBindings(
+    configuration: ModelBindingConfiguration
+  ): Promise<ModelBindingConfiguration> {
+    return this.#serialize(async () => {
+      await this.#requireActive().repository.saveModelBindings(
+        configuration,
+        this.#dependencies.now()
+      )
+      return this.#requireActive().repository.listModelBindings()
+    })
   }
 
   close(): Promise<void> {

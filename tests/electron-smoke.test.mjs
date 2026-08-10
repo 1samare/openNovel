@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict'
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import test from 'node:test'
 
 import {
@@ -12,11 +15,13 @@ import {
   findPageTarget
 } from '../scripts/electron-smoke-cdp.mjs'
 import {
+  assertNoPlaintextModelArtifacts,
   buildAgentInvokeExpression,
   buildNamedApiInvokeExpression,
   EXPECTED_AGENT_API_KEYS,
   EXPECTED_CHAPTER_API_KEYS,
   EXPECTED_LIFECYCLE_API_KEYS,
+  EXPECTED_MODEL_API_KEYS,
   EXPECTED_PROJECT_API_KEYS
 } from '../scripts/electron-smoke.mjs'
 import * as smokeProcess from '../scripts/electron-smoke-process.mjs'
@@ -151,7 +156,29 @@ test('builds an isolated page expression for invoking a named Agent API', () => 
     'move', 'previewImport', 'remove', 'rename', 'restoreVersion', 'saveDraft'
   ])
   assert.deepEqual(EXPECTED_LIFECYCLE_API_KEYS, ['completeFlush', 'onFlushRequest'])
+  assert.deepEqual(EXPECTED_MODEL_API_KEYS, [
+    'cancelConnectionTest', 'getBindings', 'listConnections', 'listModels', 'listProfiles',
+    'saveBindings', 'saveConnection', 'saveProfile', 'testConnection'
+  ])
   const chapterExpression = buildNamedApiInvokeExpression('chapters', 'list', [])
   assert.match(chapterExpression, /window\.openNovel\[['"]chapters['"]\]/)
   assert.match(chapterExpression, /list/)
+  const modelExpression = buildNamedApiInvokeExpression('models', 'listConnections', [])
+  assert.match(modelExpression, /window\.openNovel\[['"]models['"]\]/)
+  assert.match(modelExpression, /listConnections/)
+})
+
+test('rejects plaintext secrets in persisted model artifacts before smoke cleanup', async (t) => {
+  const userDataDir = await mkdtemp(join(tmpdir(), 'open-novel-model-artifacts-'))
+  t.after(() => rm(userDataDir, { recursive: true, force: true }))
+  await mkdir(join(userDataDir, 'model-secrets'))
+  await writeFile(join(userDataDir, 'model-secrets', 'connection.bin'), Buffer.from([1, 2, 3, 4]))
+  await writeFile(join(userDataDir, 'control.sqlite3'), 'safe metadata')
+
+  await assertNoPlaintextModelArtifacts(userDataDir, 'smoke-secret-sentinel')
+  await writeFile(join(userDataDir, 'control.sqlite3-wal'), 'smoke-secret-sentinel')
+  await assert.rejects(
+    assertNoPlaintextModelArtifacts(userDataDir, 'smoke-secret-sentinel'),
+    /plaintext model secret/i
+  )
 })

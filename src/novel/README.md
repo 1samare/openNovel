@@ -7,10 +7,10 @@
 ## 内容说明
 
 - `project-paths.ts`：验证绝对项目根目录，管理严格原子 manifest、目录占用、带所有权的进程锁，以及可核验进程存活并回收死亡或未完整写入持有者的陈旧锁 recovery claim。
-- `schema.ts`：定义项目 schema v1/v2 与应用级最近项目 control schema 的顺序迁移；v2 增加章节、不可变版本、草稿和导入导出任务表。
+- `schema.ts`：定义项目 schema v1–v3 与应用级 control schema v1–v2 的顺序迁移；项目 v3 增加生成模式默认与角色绑定，control v2 增加脱敏模型连接、档案和无内容调用日志。
 - `database-worker.ts`：在 Node Worker 中唯一持有 `DatabaseSync`，提供串行 RPC、写事务、一致只读事务、健康检查、快照，以及启动前退出与 open/closing/closed/failed 终态安全关闭。
-- `project-repository.ts`：封装项目基础记录、审计和应用级最近项目的参数化 SQLite 访问；最近项目可用性同时要求 manifest 与项目数据库存在。
-- `project-service.ts`：以单一生命周期队列独占项目目录/锁/数据库资源，编排可补偿的新建、打开、重命名、`.opennovel.zip` 一致备份/恢复、内部迁移快照、关闭和 shutdown。
+- `project-repository.ts`：封装项目基础记录、审计、生成模式默认/角色绑定和应用级最近项目的参数化 SQLite 访问；最近项目可用性同时要求 manifest 与项目数据库存在。
+- `project-service.ts`：以单一生命周期队列独占项目目录/锁/数据库资源，编排可补偿的新建、打开、重命名、`.opennovel.zip` 一致备份/恢复、模型绑定读写、内部迁移快照、关闭和 shutdown。
 - `chapter-service.ts`：封装卷章树、稳定排序、乐观 revision 草稿、不可变确认版本、历史恢复、导入事务、统一导出快照与审计写入。
 
 ## 依赖边界
@@ -34,3 +34,5 @@
 - 2026-08-10：将用户手动备份升级为经 manifest、SQLite 与哈希验证的 `.opennovel.zip`，内部迁移前快照继续保留目录语义。
 - 2026-08-10：独立复审将草稿 revision 改为事务内 affected-row CAS，并为根/非根 sibling position 增加统一数据库唯一索引。
 - 2026-08-10：二次复审区分 CAS affected-row 不匹配与普通事务失败，只有前者映射为草稿保存冲突。
+- 2026-08-10：阶段 3 增加 project schema v3 的模式/角色绑定表与 control schema v2 的 Provider、Model Profile 和安全调用日志表。
+- 2026-08-10：项目仓储与生命周期服务接入生成模式默认和角色绑定的事务化替换及重启读取。

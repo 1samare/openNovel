@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict'
+import { once } from 'node:events'
+import { readFile, readdir } from 'node:fs/promises'
+import { createServer } from 'node:http'
 import { fileURLToPath } from 'node:url'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -58,7 +61,21 @@ export const EXPECTED_CHAPTER_API_KEYS = [
   'restoreVersion',
   'saveDraft'
 ]
+export const EXPECTED_MODEL_API_KEYS = [
+  'cancelConnectionTest',
+  'getBindings',
+  'listConnections',
+  'listModels',
+  'listProfiles',
+  'saveBindings',
+  'saveConnection',
+  'saveProfile',
+  'testConnection'
+]
 export const EXPECTED_LIFECYCLE_API_KEYS = ['completeFlush', 'onFlushRequest']
+
+const SMOKE_MODEL_ID = 'smoke-model'
+const SMOKE_MODEL_SECRET = 'local-smoke-secret'
 
 const SMOKE_INTERVAL_MS = 100
 const BUILD_TIMEOUT_MS = 120000
@@ -103,6 +120,102 @@ const RECOVERY_EVENT_TYPES = [
 ]
 
 const delay = (milliseconds) => new Promise((resolveDelay) => setTimeout(resolveDelay, milliseconds))
+
+const listFiles = async (directory) => {
+  let entries
+  try {
+    entries = await readdir(directory, { withFileTypes: true })
+  } catch (error) {
+    if (error?.code === 'ENOENT') return []
+    throw error
+  }
+  const nested = await Promise.all(entries.map((entry) => {
+    const path = join(directory, entry.name)
+    return entry.isDirectory() ? listFiles(path) : [path]
+  }))
+  return nested.flat()
+}
+
+export const assertNoPlaintextModelArtifacts = async (userDataDir, secret) => {
+  assert.equal(typeof secret, 'string')
+  assert.equal(secret.length > 0, true)
+  const controlArtifacts = [
+    join(userDataDir, 'control.sqlite3'),
+    join(userDataDir, 'control.sqlite3-wal'),
+    join(userDataDir, 'control.sqlite3-shm')
+  ]
+  const secretArtifacts = await listFiles(join(userDataDir, 'model-secrets'))
+  const sentinel = Buffer.from(secret, 'utf8')
+  for (const artifact of [...controlArtifacts, ...secretArtifacts]) {
+    let bytes
+    try {
+      bytes = await readFile(artifact)
+    } catch (error) {
+      if (error?.code === 'ENOENT') continue
+      throw error
+    }
+    assert.equal(
+      bytes.includes(sentinel),
+      false,
+      'plaintext model secret found in persisted artifacts'
+    )
+  }
+}
+
+const startFakeModelProvider = async () => {
+  const server = createServer(async (request, response) => {
+    try {
+      for await (const _chunk of request) {
+        // Drain the request before responding so Electron can reuse the loopback connection.
+      }
+      if (request.headers.authorization !== `Bearer ${SMOKE_MODEL_SECRET}`) {
+        response.writeHead(401, { 'content-type': 'application/json' })
+        response.end(JSON.stringify({ error: { code: 'invalid_api_key' } }))
+        return
+      }
+      if (request.method === 'GET' && request.url === '/v1/models') {
+        response.writeHead(200, { 'content-type': 'application/json' })
+        response.end(JSON.stringify({ data: [{ id: SMOKE_MODEL_ID, name: 'Smoke Model' }] }))
+        return
+      }
+      if (request.method === 'POST' && request.url === '/v1/chat/completions') {
+        response.writeHead(200, {
+          'content-type': 'application/json',
+          'x-request-id': 'smoke-provider-request'
+        })
+        response.end(JSON.stringify({
+          id: 'smoke-completion',
+          object: 'chat.completion',
+          created: 1,
+          model: SMOKE_MODEL_ID,
+          choices: [{
+            index: 0,
+            message: { role: 'assistant', content: 'OK' },
+            finish_reason: 'stop'
+          }],
+          usage: { prompt_tokens: 2, completion_tokens: 1, total_tokens: 3 }
+        }))
+        return
+      }
+      response.writeHead(404, { 'content-type': 'application/json' })
+      response.end(JSON.stringify({ error: { code: 'not_found' } }))
+    } catch {
+      response.destroy()
+    }
+  })
+  server.listen(0, '127.0.0.1')
+  await once(server, 'listening')
+  const address = server.address()
+  assert.equal(typeof address, 'object')
+  return {
+    baseUrl: `http://127.0.0.1:${address.port}/v1`,
+    async close() {
+      server.closeAllConnections()
+      server.close()
+      await once(server, 'close')
+    }
+  }
+}
 
 export const buildNamedApiInvokeExpression = (namespace, method, args) =>
   `(async () => window.openNovel[${JSON.stringify(namespace)}][${JSON.stringify(method)}](...${JSON.stringify(args)}))()`
@@ -177,10 +290,81 @@ const verifyNamedApi = async (session, namespace, expectedKeys, label) => {
   assert.equal(allFunctions, true, `all ${namespace} Preload APIs must be functions`)
 }
 
-const verifyPreloadApis = async (session) => {
+const assertModelSuccess = (result, label) => {
+  assert.equal(result?.ok, true, `${label} must succeed`)
+  return result.data
+}
+
+const verifyModelApi = async (session, modelBaseUrl) => {
+  let connections = assertModelSuccess(
+    await session.cdp.evaluate(buildNamedApiInvokeExpression('models', 'listConnections', [])),
+    'models.listConnections'
+  )
+  let profiles = assertModelSuccess(
+    await session.cdp.evaluate(buildNamedApiInvokeExpression('models', 'listProfiles', [])),
+    'models.listProfiles'
+  )
+  if (connections.length === 0) {
+    const connection = assertModelSuccess(await session.cdp.evaluate(buildNamedApiInvokeExpression(
+      'models',
+      'saveConnection',
+      [{
+        name: 'Smoke OpenAI-compatible',
+        kind: 'openai-compatible',
+        baseUrl: modelBaseUrl,
+        apiKey: SMOKE_MODEL_SECRET,
+        enabled: true
+      }]
+    )), 'models.saveConnection')
+    assert.equal(JSON.stringify(connection).includes(SMOKE_MODEL_SECRET), false)
+    assertModelSuccess(await session.cdp.evaluate(buildNamedApiInvokeExpression(
+      'models',
+      'saveProfile',
+      [{
+        connectionId: connection.id,
+        label: 'Smoke Profile',
+        modelId: SMOKE_MODEL_ID,
+        temperature: 0.5,
+        maxOutputTokens: 128,
+        contextWindow: 4096,
+        capabilities: ['stream-text', 'structured-output', 'usage']
+      }]
+    )), 'models.saveProfile')
+    connections = assertModelSuccess(
+      await session.cdp.evaluate(buildNamedApiInvokeExpression('models', 'listConnections', [])),
+      'models.listConnections after save'
+    )
+    profiles = assertModelSuccess(
+      await session.cdp.evaluate(buildNamedApiInvokeExpression('models', 'listProfiles', [])),
+      'models.listProfiles after save'
+    )
+  }
+  assert.equal(connections.length, 1, 'the encrypted connection must persist across restart')
+  assert.equal(profiles.length, 1, 'the model profile must persist across restart')
+  assert.equal(JSON.stringify([connections, profiles]).includes(SMOKE_MODEL_SECRET), false)
+  const connection = connections[0]
+  const tested = assertModelSuccess(await session.cdp.evaluate(buildNamedApiInvokeExpression(
+    'models',
+    'testConnection',
+    [{ requestId: `electron-smoke-model-test-${Date.now()}`, connectionId: connection.id, modelId: SMOKE_MODEL_ID }]
+  )), 'models.testConnection')
+  assert.equal(tested.authenticated, true)
+  assert.deepEqual(tested.capabilities, ['usage'])
+  const listed = assertModelSuccess(await session.cdp.evaluate(buildNamedApiInvokeExpression(
+    'models', 'listModels', [connection.id]
+  )), 'models.listModels')
+  assert.deepEqual(listed, [{ id: SMOKE_MODEL_ID, label: 'Smoke Model' }])
+
+  const bindings = await session.cdp.evaluate(buildNamedApiInvokeExpression('models', 'getBindings', []))
+  assert.equal(bindings?.ok, false, 'models.getBindings must fail safely before opening a project')
+  assert.equal(bindings?.error?.code, 'MODEL_OPERATION_FAILED')
+}
+
+const verifyPreloadApis = async (session, modelBaseUrl) => {
   await verifyNamedApi(session, 'agent', EXPECTED_AGENT_API_KEYS, 'the eight Preload Agent APIs')
   await verifyNamedApi(session, 'projects', EXPECTED_PROJECT_API_KEYS, 'the nine Preload Project APIs')
   await verifyNamedApi(session, 'chapters', EXPECTED_CHAPTER_API_KEYS, 'the thirteen Preload Chapter APIs')
+  await verifyNamedApi(session, 'models', EXPECTED_MODEL_API_KEYS, 'the nine Preload Model APIs')
   await verifyNamedApi(session, 'lifecycle', EXPECTED_LIFECYCLE_API_KEYS, 'the two Preload lifecycle APIs')
 
   const recent = await session.cdp.evaluate(buildNamedApiInvokeExpression('projects', 'listRecent', []))
@@ -189,6 +373,7 @@ const verifyPreloadApis = async (session) => {
   const chapters = await session.cdp.evaluate(buildNamedApiInvokeExpression('chapters', 'list', []))
   assert.equal(chapters?.ok, false, 'chapters.list must fail safely before opening a project')
   assert.equal(chapters?.error?.code, 'PROJECT_NOT_OPEN')
+  await verifyModelApi(session, modelBaseUrl)
   await installEventProbe(session)
 }
 
@@ -211,7 +396,7 @@ const startSession = async (cwd, userDataDir, state) => {
     session.cdp.on('Runtime.exceptionThrown', () => {
       state.console.push('runtime.exceptionThrown')
     })
-    await verifyPreloadApis(session)
+    await verifyPreloadApis(session, state.modelBaseUrl)
     state.sessions.push(session)
     return session
   } catch (error) {
@@ -358,12 +543,16 @@ export const runSmoke = async ({ cwd = resolve(fileURLToPath(new URL('..', impor
   }
   let userDataDir
   let currentSession
+  let modelProvider
   let failure
 
   try {
     state.stage = 'build'
     const build = await runBuild(cwd, state)
     state.processRecords.push(build)
+    state.stage = 'model-provider'
+    modelProvider = await startFakeModelProvider()
+    state.modelBaseUrl = modelProvider.baseUrl
     userDataDir = await createSmokeUserDataDirectory()
     state.stage = 'startup'
     currentSession = await startSession(cwd, userDataDir, state)
@@ -380,6 +569,27 @@ export const runSmoke = async ({ cwd = resolve(fileURLToPath(new URL('..', impor
     await closeSession(currentSession)
   } catch (error) {
     state.cleanup.push(`session cleanup failed: ${redactText(error.message)}`)
+  }
+  if (userDataDir !== undefined) {
+    try {
+      await assertNoPlaintextModelArtifacts(userDataDir, SMOKE_MODEL_SECRET)
+      state.cleanup.push('model artifacts contain no plaintext secret')
+    } catch (error) {
+      state.cleanup.push(`model artifact scan failed: ${redactText(error.message)}`)
+      if (failure === undefined) {
+        state.stage = 'model-artifact-scan'
+        failure = error
+      }
+    }
+  }
+  if (modelProvider !== undefined) {
+    try {
+      await modelProvider.close()
+      state.cleanup.push('model provider closed')
+    } catch (error) {
+      state.cleanup.push(`model provider cleanup failed: ${redactText(error.message)}`)
+      if (failure === undefined) failure = error
+    }
   }
   if (userDataDir !== undefined) {
     try {

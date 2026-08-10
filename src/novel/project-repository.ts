@@ -6,6 +6,11 @@ import {
   type ProjectSummary,
   type RecentProjectSummary
 } from '../shared/project.ts'
+import type {
+  AgentRoleBinding,
+  GenerationModeDefault,
+  ModelBindingConfiguration
+} from '../shared/model.ts'
 import { DatabaseWorkerClient } from './database-worker.ts'
 import {
   CONTROL_MIGRATIONS,
@@ -26,6 +31,33 @@ type RecentProjectRow = {
   project_path: string
   last_opened_at: string
   last_backup_path: string | null
+}
+
+type ModeDefaultRow = {
+  mode: GenerationModeDefault['mode']
+  primary_profile_id: string
+  fallback_profile_ids_json: string
+  allow_cross_provider_fallback: number
+}
+
+type RoleBindingRow = {
+  role: AgentRoleBinding['role']
+  mode: AgentRoleBinding['mode']
+  primary_profile_id: string
+  fallback_profile_ids_json: string
+  allow_cross_provider_fallback: number
+}
+
+const parseProfileIds = (value: string): string[] => {
+  try {
+    const parsed: unknown = JSON.parse(value)
+    if (!Array.isArray(parsed) || !parsed.every((item) => typeof item === 'string')) {
+      throw new Error('Invalid profile IDs')
+    }
+    return parsed
+  } catch {
+    throw new ProjectDomainError('PROJECT_DATA_MISMATCH', 'Model binding data is invalid')
+  }
 }
 
 export class ProjectRepository {
@@ -89,6 +121,73 @@ export class ProjectRepository {
               VALUES (?, ?, ?, ?, ?)`,
         params: [auditId, projectId, 'project.renamed', JSON.stringify({ title }), updatedAt]
       }
+    ])
+  }
+
+  async listModelBindings(): Promise<ModelBindingConfiguration> {
+    const [modeRows, roleRows] = await Promise.all([
+      this.#database.all<ModeDefaultRow>(`
+        SELECT mode, primary_profile_id, fallback_profile_ids_json,
+               allow_cross_provider_fallback
+        FROM generation_mode_defaults ORDER BY mode
+      `),
+      this.#database.all<RoleBindingRow>(`
+        SELECT role, mode, primary_profile_id, fallback_profile_ids_json,
+               allow_cross_provider_fallback
+        FROM agent_role_bindings ORDER BY mode, role
+      `)
+    ])
+    return {
+      modeDefaults: modeRows.map((row) => ({
+        mode: row.mode,
+        primaryProfileId: row.primary_profile_id,
+        fallbackProfileIds: parseProfileIds(row.fallback_profile_ids_json),
+        allowCrossProviderFallback: row.allow_cross_provider_fallback === 1
+      })),
+      roleBindings: roleRows.map((row) => ({
+        role: row.role,
+        mode: row.mode,
+        primaryProfileId: row.primary_profile_id,
+        fallbackProfileIds: parseProfileIds(row.fallback_profile_ids_json),
+        allowCrossProviderFallback: row.allow_cross_provider_fallback === 1
+      }))
+    }
+  }
+
+  async saveModelBindings(
+    configuration: ModelBindingConfiguration,
+    updatedAt: string
+  ): Promise<void> {
+    await this.#database.transaction([
+      { sql: 'DELETE FROM agent_role_bindings' },
+      { sql: 'DELETE FROM generation_mode_defaults' },
+      ...configuration.modeDefaults.map((route) => ({
+        sql: `INSERT INTO generation_mode_defaults (
+                mode, primary_profile_id, fallback_profile_ids_json,
+                allow_cross_provider_fallback, updated_at
+              ) VALUES (?, ?, ?, ?, ?)`,
+        params: [
+          route.mode,
+          route.primaryProfileId,
+          JSON.stringify(route.fallbackProfileIds),
+          route.allowCrossProviderFallback ? 1 : 0,
+          updatedAt
+        ]
+      })),
+      ...configuration.roleBindings.map((route) => ({
+        sql: `INSERT INTO agent_role_bindings (
+                role, mode, primary_profile_id, fallback_profile_ids_json,
+                allow_cross_provider_fallback, updated_at
+              ) VALUES (?, ?, ?, ?, ?, ?)`,
+        params: [
+          route.role,
+          route.mode,
+          route.primaryProfileId,
+          JSON.stringify(route.fallbackProfileIds),
+          route.allowCrossProviderFallback ? 1 : 0,
+          updatedAt
+        ]
+      }))
     ])
   }
 

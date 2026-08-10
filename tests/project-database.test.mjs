@@ -30,7 +30,7 @@ const hasCode = (code) => (error) => {
   return true
 }
 
-test('opens schema version two with durable SQLite pragmas and chapter tables in a worker', async (t) => {
+test('opens schema version three with durable SQLite pragmas, chapter tables, and model bindings', async (t) => {
   const sandbox = await mkdtemp(join(tmpdir(), 'open-novel-database-'))
 
   const client = await DatabaseWorkerClient.open(join(sandbox, 'project.sqlite3'))
@@ -41,7 +41,7 @@ test('opens schema version two with durable SQLite pragmas and chapter tables in
 
   assert.deepEqual(await client.health(), {
     quickCheck: 'ok',
-    userVersion: 2,
+    userVersion: 3,
     journalMode: 'wal',
     foreignKeys: 1,
     busyTimeout: 5000
@@ -52,11 +52,13 @@ test('opens schema version two with durable SQLite pragmas and chapter tables in
     ORDER BY name
   `)
   assert.deepEqual(tables, [
+    { name: 'agent_role_bindings' },
     { name: 'audit_events' },
     { name: 'chapter_drafts' },
     { name: 'chapter_versions' },
     { name: 'chapters' },
     { name: 'export_jobs' },
+    { name: 'generation_mode_defaults' },
     { name: 'import_jobs' },
     { name: 'project_settings' },
     { name: 'projects' },

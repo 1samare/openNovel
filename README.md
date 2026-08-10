@@ -1,6 +1,6 @@
 # OpenNovel
 
-OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应用。本仓库已交付 Electron + Vue 3 + TypeScript 基础架构、离线 Agent Harness、独立项目生命周期，以及阶段 2 的章节编辑、版本与本地文件交换；阶段 2 已完成并推送，阶段 3 尚未开工，真实模型调用仍不在当前交付范围。
+OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应用。本仓库已交付 Electron + Vue 3 + TypeScript 基础架构、离线 Agent Harness、独立项目生命周期、章节编辑与版本交换，以及阶段 3 的 BYOK 密钥库、Model Gateway 与角色绑定；阶段 3 已完成本地验收并等待确认推送，真实 Agent 小说工作流仍不在当前交付范围。
 
 ## 目录用途
 
@@ -99,6 +99,22 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 
 - 2026-08-10：用户确认阶段 2 完成；实现与交接已普通快进推送到 `origin/feat/v1.0@b835840`，推送后 upstream 与 ahead/behind 核对为 0/0。
 
+- 2026-08-10：阶段 3 从根工作区 `feat/v1.0@419b4d8` 开工；fetch 后远端 0/0，按密钥库、控制库元数据、三类 Provider Adapter、Model Gateway、固定 IPC、模型设置页和项目角色绑定纵向切片实施。
+
+- 2026-08-10：阶段 3 首个检查点完成：锁定 AI SDK 7 与三类 Provider/Zod，新增共享模型契约、project schema v3 和 control schema v2，聚焦 Node 12/12 与 Node 类型检查通过。
+
+- 2026-08-10：阶段 3 密钥安全检查点完成：操作系统加密不可用时拒绝落盘，API Key 使用独立原子密文文件；Provider URL 只允许 HTTPS/显式回环 HTTP，并阻止协议降级与跨 origin 凭据转发。
+
+- 2026-08-10：阶段 3 持久化检查点完成：Provider 连接和 Model Profile 落入 control 数据库、模式默认和角色覆盖落入项目库；公开连接保持脱敏，角色能力与跨供应商 fallback 显式确认均在保存边界阻断。
+
+- 2026-08-10：阶段 3 Provider Adapter 检查点完成：三类 AI SDK 原生协议均由回环 fake server 验证连接、流式文本、Zod 结构化输出、usage/request ID、失败与取消；OpenAI-compatible 提供可选模型列表，手工模型 ID 始终保留。
+
+- 2026-08-10：阶段 3 Model Gateway 检查点完成：Profile 能力与密钥在调用前解析，稳定错误和有限抖动重试覆盖供应商/网络矩阵，流输出后禁止重放；调用日志只经白名单和 SQLite Worker 保存元数据。
+
+- 2026-08-10：阶段 3 主进程接入检查点完成：safeStorage 密钥根、模型 runtime、九个固定 IPC 和九方法 preload 已组合；关闭时取消并等待模型网络调用，随后按模型控制库、章节、项目顺序释放资源。
+
+- 2026-08-10：阶段 3 本地验收完成：模型设置/Profile/三模式六角色路由、密钥全路径审计、生产 Electron 重启解密和两轮独立复审通过；用户在本机设置页确认真实 DeepSeek 连接成功，等待明确完成确认后推送。
+
 ## 技术栈
 
 - Electron
@@ -106,6 +122,7 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 - TypeScript
 - electron-vite
 - Vue Router
+- Vercel AI SDK、OpenAI-compatible/Anthropic/Google Provider 与 Zod
 - npm
 - Vitest、Vue Test Utils 与 happy-dom（组件测试）
 
@@ -164,29 +181,31 @@ docs/            按日期归档的设计和修改计划
 已经具备：
 
 - Electron 窗口和应用生命周期；
-- 隔离的渲染进程，以及仅暴露命名 Agent、Project、Chapter 与退出保存 Lifecycle 方法的预加载边界；
+- 隔离的渲染进程，以及仅暴露命名 Agent、Project、Chapter、Model 与退出保存 Lifecycle 方法的预加载边界；
 - Vue 应用、Hash Router 和公共工作台布局；
 - 本地优先项目中心：新建/打开独立小说项目、最近项目、缺失路径恢复与仅移除记录；产品其余一级模块占位页面；
-- 每项目独立目录、严格 manifest、SQLite Worker/schema v2、单写者锁、可校验 `.opennovel.zip` 备份/恢复，以及工作台重命名、备份和安全关闭；
+- 每项目独立目录、严格 manifest、SQLite Worker/schema v3、单写者锁、可校验 `.opennovel.zip` 备份/恢复，以及工作台重命名、备份和安全关闭；
 - 可维护分卷/章节层级的章节树、CodeMirror 6 编辑器、800ms 自动保存、切章/备份/退出刷盘、不可变确认版本与历史恢复；
 - UTF-8 TXT/Markdown/paste 导入预览与事务确认，以及来自同一数据库快照的 TXT、Markdown、无宏 DOCX 导出；
 - Agent Run 的公共契约、运行时校验和纯状态机；
 - 每 Run 一份 schema v1 JSON 的原子持久化、损坏记录隔离、事件补取和 analysis/final 检查点恢复；
 - `/workspace/chat` 的 Harness Agent 工作台：可创建 Run、查看有节奏的本地 Mock 流与时间线、审批、运行中取消、重启后恢复、本地损坏记录诊断及连续失败事件的持久化安全详情；
 - 沙箱化 CommonJS Preload、固定 Agent IPC 白名单、来源校验和不记录正文的结构化日志；
+- 基于 Electron `safeStorage` 的 BYOK 密钥库、OpenAI-compatible/Anthropic/Gemini Adapter、供应商无关 Model Gateway、模型档案、三模式六角色路由和脱敏调用日志；
+- `/workspace/settings` 模型设置页：DeepSeek 预设、手工模型 ID、连接测试/取消、能力声明、fallback 与跨供应商显式确认；
 - TypeScript 类型检查、结构测试和生产构建命令。
-- Windows 生产 Electron smoke：精确验证 Agent 8、Project 9、Chapter 13、Lifecycle 2 个命名 API，以及流式审批、运行中取消、重启恢复、事件连续性和本次进程树清理。
+- Windows 生产 Electron smoke：精确验证 Agent 8、Project 9、Chapter 13、Model 9、Lifecycle 2 个命名 API，以及模型密钥重启解密、回环 Provider、流式审批、运行中取消、重启恢复、事件连续性和本次进程树清理。
 
 尚未实现：
 
-- 真实 AI 模型配置、调用、任意工具和自定义 Skill；
+- 把 Model Gateway 接入真实多 Agent 小说创作工作流、任意工具和自定义 Skill；
 - 应用安装包生成。
 
 当前 Harness 为单用户、单窗口的 M0 实现，使用确定性 Mock 文本；Prompt、事件和输出以本地明文 JSON 保存在 Electron `userData/agent-runs`，尚未提供加密、清理界面或跨设备同步。
 
 ## 安全边界
 
-渲染进程启用上下文隔离与沙箱，并关闭 Node.js 集成。预加载层以沙箱兼容的 CommonJS 工件运行，不暴露通用 Electron、Node.js、IPC 或文件系统能力；它只提供固定的 `window.openNovel.agent`、`window.openNovel.projects` 命令与校验，以及克隆后的安全结果/Agent 事件。主进程仅接受当前顶层应用文件页或精确开发服务器 origin 的请求。
+渲染进程启用上下文隔离与沙箱，并关闭 Node.js 集成。预加载层以沙箱兼容的 CommonJS 工件运行，不暴露通用 Electron、Node.js、IPC、文件系统或 API Key 读取能力；它只提供固定的 `window.openNovel.agent`、`projects`、`chapters`、`models` 与 `lifecycle` 命名方法、严格结果校验和克隆后的安全数据。主进程仅接受当前顶层应用文件页或精确开发服务器 origin 的请求。
 
 ## 修改计划约定
 

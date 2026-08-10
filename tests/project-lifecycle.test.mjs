@@ -162,7 +162,7 @@ test('restores a consistent pre-migration snapshot after a transient migration f
   const projectMigrations = [
     ...PROJECT_MIGRATIONS,
     {
-      version: 3,
+      version: 4,
       name: 'test-project-title-index',
       sql: 'CREATE INDEX project_title_index ON projects(title);'
     }
@@ -179,11 +179,11 @@ test('restores a consistent pre-migration snapshot after a transient migration f
   const created = await service.create({ root: projectRoot, title: '迁移恢复' })
   await service.close()
   const databasePath = join(projectRoot, 'project.sqlite3')
-  const prepareVersionTwo = await DatabaseWorkerClient.open(databasePath, [])
-  await prepareVersionTwo.run('DROP INDEX project_title_index')
-  await prepareVersionTwo.run('DELETE FROM schema_migrations WHERE version = 3')
-  await prepareVersionTwo.run('PRAGMA user_version = 2')
-  await prepareVersionTwo.close()
+  const prepareVersionThree = await DatabaseWorkerClient.open(databasePath, [])
+  await prepareVersionThree.run('DROP INDEX project_title_index')
+  await prepareVersionThree.run('DELETE FROM schema_migrations WHERE version = 4')
+  await prepareVersionThree.run('PRAGMA user_version = 3')
+  await prepareVersionThree.close()
 
   const blocker = new DatabaseSync(databasePath)
   blocker.exec('PRAGMA journal_mode = WAL; BEGIN IMMEDIATE')
@@ -205,7 +205,7 @@ test('restores a consistent pre-migration snapshot after a transient migration f
   assert.equal(restored.projectId, created.projectId)
   assert.equal(restored.title, '迁移恢复')
   const restoredDatabase = await DatabaseWorkerClient.open(join(restoredRoot, 'project.sqlite3'), [])
-  assert.equal((await restoredDatabase.health()).userVersion, 3)
+  assert.equal((await restoredDatabase.health()).userVersion, 4)
   await restoredDatabase.close()
 })
 

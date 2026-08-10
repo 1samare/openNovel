@@ -15,6 +15,7 @@
     "src/main/**/*.ts",
     "src/preload/**/*.ts",
     "src/agent/**/*.ts",
+    "src/model/**/*.ts",
     "src/novel/**/*.ts",
     "src/shared/**/*.ts"
   ]

@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, safeStorage } from 'electron'
 import { APP_NAME } from '@shared/app'
 import { ProjectService } from '../novel/project-service.ts'
 import { registerAgentIpcHandlers } from './agent-ipc.ts'
@@ -15,6 +15,8 @@ import { registerProjectIpcHandlers } from './project-ipc.ts'
 import { registerChapterIpcHandlers } from './chapter-ipc.ts'
 import { createChapterRuntime, type ChapterDialogs } from './chapter-runtime.ts'
 import type { ExportFormat } from '../shared/chapter.ts'
+import { registerModelIpcHandlers } from './model-ipc.ts'
+import { startModelRuntime } from './model-runtime.ts'
 import {
   createRendererFlushCoordinator,
   destroyWindowsForForcedExit,
@@ -163,10 +165,12 @@ const createMainWindow = (runtime: AgentRuntime): BrowserWindow => {
 let disposeAgentRuntime = (): void => undefined
 let disposeRendererFlushRuntime = (): void => undefined
 let flushActiveRenderers = async (): Promise<boolean> => true
+let shutdownModelRuntime = async (): Promise<void> => undefined
 let shutdownProjectRuntime = async (): Promise<void> => undefined
 const shutdownApplicationResources = async (): Promise<void> => {
   disposeAgentRuntime()
   disposeRendererFlushRuntime()
+  await shutdownModelRuntime()
   await shutdownProjectRuntime()
 }
 const shutdownGate = createProjectShutdownGate({
@@ -221,6 +225,15 @@ app.whenReady().then(async () => {
   const projectService = await ProjectService.start(
     join(app.getPath('userData'), 'control.sqlite3')
   )
+  shutdownProjectRuntime = () => projectService.shutdown()
+  const modelRuntime = await startModelRuntime({
+    controlDatabasePath: join(app.getPath('userData'), 'control.sqlite3'),
+    secretRoot: join(app.getPath('userData'), 'model-secrets'),
+    cipher: safeStorage,
+    projectBindings: projectService,
+    senderPolicy: policy
+  })
+  shutdownModelRuntime = () => modelRuntime.shutdown()
   const chapterRuntime = createChapterRuntime({
     project: projectService,
     dialogs: chapterDialogs,
@@ -242,7 +255,9 @@ app.whenReady().then(async () => {
       const disposeAgentIpc = registerAgentIpcHandlers(ipcMain, runtime)
       const disposeProjectIpc = registerProjectIpcHandlers(ipcMain, projectRuntime)
       const disposeChapterIpc = registerChapterIpcHandlers(ipcMain, chapterRuntime)
+      const disposeModelIpc = registerModelIpcHandlers(ipcMain, modelRuntime)
       return () => {
+        disposeModelIpc()
         disposeChapterIpc()
         disposeProjectIpc()
         disposeAgentIpc()
@@ -263,7 +278,7 @@ app.whenReady().then(async () => {
   await dialog.showMessageBox({
     type: 'error',
     title: '应用启动失败',
-    message: '本地项目数据库无法启动。应用将安全退出，项目目录不会被删除。',
+    message: '本地数据库或安全密钥服务无法启动。应用将安全退出，项目目录不会被删除。',
     buttons: ['安全退出'],
     noLink: true
   }).catch(() => undefined)
