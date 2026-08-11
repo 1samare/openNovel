@@ -17,7 +17,7 @@
 - `agent-harness.test.mjs`：行为化验证渲染层先订阅后加载、加载竞态合并、序列缺口回补/去重/刷新、连续 `run.failed` 的安全详情回读与刷新重试、拒绝规范化、操作级重试、命令锁、陈旧结果隔离、队列恢复与退订，并结合控制器状态和页面契约检查可访问控件、流式 final、失败诊断和 520px 顶栏命中区。
 - `electron-smoke.test.mjs`：验证生产 smoke 的 Agent/Project/Chapter/Model/Lifecycle 精确桥接、事件序列连续性、delta 去重、诊断脱敏、CDP target 选择、Windows npm CLI 调用、Electron 启动参数、进程树清理参数与持久化模型产物明文拒绝；不启动真实窗口。
 - `project-paths.test.mjs`：使用真实临时目录验证项目根路径、目录占用、严格原子 manifest、活动写锁、需确认的陈旧锁恢复、同时恢复的唯一所有权，以及死亡或未完整写入的 recovery claim 回收。
-- `project-database.test.mjs`：使用真实 SQLite 文件和受控 Worker 验证 RPC、project schema v1–v3、pragma、事务/迁移回滚、事件循环响应、正常关闭，以及 ready 前/后的异常退出均稳定失败。
+- `project-database.test.mjs`：使用真实 SQLite 文件和受控 Worker 验证 RPC、project schema v1–v4、带章节/角色绑定数据的 v3→v4 保真迁移、pragma、事务/迁移回滚、事件循环响应、正常关闭，以及 ready 前/后的异常退出均稳定失败。
 - `model-contract.test.mjs`：验证阶段 3 固定模型 IPC 参数、角色所需能力、公开结果密钥字段拒绝，以及 project v3/control v2 的真实 SQLite 迁移表。
 - `model-secret-store.test.mjs`：使用真实临时目录验证操作系统加密不可用拒绝、密文原子替换/恢复/删除，以及 Provider URL、协议降级和跨 origin 凭据转发边界。
 - `model-repository.test.mjs`：使用真实 control/project SQLite 和密钥目录验证连接脱敏、档案/绑定重启持久化、空 Key 保留以及能力与跨供应商显式确认门禁。
@@ -25,7 +25,15 @@
 - `model-gateway.test.mjs`：验证 Profile/连接/密钥解析、能力先验门禁、稳定错误矩阵、有限抖动重试、流开始后不重放、启发式 token 估算和真实 SQLite 白名单日志。
 - `model-ipc.test.mjs`：验证模型九命令的精确参数、sender 白名单、请求 ID 锁、连接测试取消、关闭等待、脱敏 preload 校验及 safeStorage 生产组合顺序。
 - `model-security.test.mjs`：使用唯一 BYOK sentinel 扫描真实 control/project SQLite、备份 ZIP 及解包内容、章节导出、调用日志、公开 IPC 返回和加密密钥文件，证明无密钥明文泄漏。
+- `novel-contract.test.mjs`：验证阶段 4 题材、资料/大纲状态、严格结构化提案、固定 Bible IPC 参数、公开快照守卫与 project schema v4 契约。
+- `bible-repository.test.mjs`：使用真实 project SQLite 验证档案/资料乐观冲突、追加式来源版本、显式恢复来源/权威状态、移动大纲历史恢复及故障注入全回滚、人物引用完整性、重启一致、权威上下文和分层大纲排序。
+- `proposal-service.test.mjs`：使用真实 project SQLite 验证候选精选、拒绝隔离、重复决定、由权威来源版本推导的可信冲突证据、无关来源拒绝、显式替代、批准版本来源以及失败决定的事务回滚。
+- `structured-coauthor.test.mjs`：验证双题材 Prompt 仅含权威资料、三专业角色分别通过领域 schema/持久化链、角色优先路由与已确认 fallback、结构失败最多一次定向修复，以及模型返回后到落库前的取消门禁。
+- `bible-ipc.test.mjs`：验证活动项目 Bible Runtime、项目变化即时取消、生成请求锁、关闭开始拒绝新命令/等待既有工作、十个固定 IPC、sender/参数门禁和 preload 畸形结果拒绝。
+- `electron-smoke.test.mjs`：除既有生产进程与脱敏契约外，验证 `novelBible` 十方法精确桥接和命名调用表达式。
+- `electron-foundation.test.mjs`：验证 sandbox preload 使用 CommonJS 独立工件，并将阶段四契约依赖 Zod 内联而非保留第三方 `require`。
 - `ui/model-settings.spec.ts`：挂载真实模型设置页，验证 BYOK 脱敏、DeepSeek 预设、连接/Profile 表单、三模式六角色绑定、能力门禁和跨供应商显式确认。
+- `ui/novel-bible.spec.ts`：挂载小说圣经状态与真实世界观/人物/大纲页面，验证跨项目异步隔离、严格 draft、结构化字段保真、失败表单/档案 dirty 草稿保留、关系人物、候选/历史快照预览、恢复确认和四级树操作。
 - `project-lifecycle.test.mjs`：使用真实目录、SQLite 和两个 service 验证新建重启、重命名及 control 失败补偿、最近项目完整文件可用性、备份恢复、临时 v4 迁移失败后从一致快照恢复、跨实例写锁、同 service 生命周期串行、失败逆序清理和递归路径拒绝。
 - `project-ipc.test.mjs`：验证固定项目命令、sender/参数守卫、系统选择/最近路径授权、陈旧锁确认、preload 最小桥接、错误脱敏、异步退出等待与关闭失败先提示后退出。
 - `renderer-flush.test.mjs`：验证退出前保存握手的固定事件、preload 最小桥接、sender/请求归属校验、拒绝、超时、释放和可重试退出门禁。
@@ -40,6 +48,17 @@
 新增或修改测试时，必须同步更新本 README；新行为遵循 RED-GREEN-REFACTOR，并使用可观察的项目行为断言。
 
 ## 变更同步
+
+- 2026-08-11：阶段 4 首组 RED 定义共享小说圣经契约、严格设定提案、固定 Bible 命令、公开快照和 project schema v4 表集合。
+- 2026-08-11：阶段 4 仓储 RED 覆盖主类型锁定、手工资料、追加版本、陈旧写入、恢复、重启、审计和四级大纲排序。
+- 2026-08-11：阶段 4 提案 RED 覆盖确定性精选、拒绝隔离、重复决定、目标变化后的显式替代、批准来源追溯和事务回滚。
+- 2026-08-11：阶段 4 结构化共创 RED 覆盖双题材 Prompt、权威上下文隔离、角色/Profile 路由、fallback、一次修复和取消。
+- 2026-08-11：阶段 4 主进程边界 RED 覆盖活动项目切换、生成请求锁、取消、关闭等待、十命令 IPC 与 preload 安全守卫。
+- 2026-08-11：阶段 4 生产验收 RED 将 `novelBible` 十方法精确桥接纳入 Electron smoke 纯逻辑契约。
+- 2026-08-11：生产 smoke 定位到 sandbox preload 外部化 Zod 后，补充构建配置契约，要求其在 preload 中内联。
+- 2026-08-11：阶段 4 退出审计补充可信冲突 RED，要求服务端从来源版本推导旧值/新值并拒绝跨实体伪造来源。
+- 2026-08-11：project schema v4 后将阶段 3 模型契约基线同步到 v4，并把生命周期的瞬时迁移失败夹具推进到临时 v5，继续验证从真实 v4 一致快照恢复。
+- 2026-08-11：退出复审新增档案 CAS、陈旧提案零覆盖、恢复来源/移动大纲、人物引用、Runtime 项目 epoch/close、renderer draft/异步/预览以及三角色生产生成链回归；终审再补大纲恢复事务故障注入和无关 mutation 不覆盖档案草稿，完整 Node 现为 226 项、UI 为 41 项。
 
 - 2026-08-10：阶段 3 首组 RED/GREEN 覆盖共享模型契约、角色能力门禁、脱敏结果和 project v3/control v2 实际迁移。
 - 2026-08-10：阶段 3 密钥与 URL RED/GREEN 覆盖加密可用性、密文原子性、不安全 Base URL/重定向和跨 origin 授权头移除。

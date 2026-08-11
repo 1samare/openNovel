@@ -12,6 +12,9 @@ export default defineConfig({
   },
   preload: {
     build: {
+      externalizeDeps: {
+        exclude: ['zod']
+      },
       rollupOptions: {
         output: {
           format: 'cjs',

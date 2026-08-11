@@ -123,6 +123,12 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 
 - 2026-08-10：阶段 3 最终完成记录由当前 HEAD 承载并普通快进推送；本地与 `origin/feat/v1.0` 最终一致，ahead/behind 0/0。
 
+- 2026-08-11：阶段 4 从根工作区 `feat/v1.0@b88f8a3` 开工；fetch 后远端 0/0，按小说圣经 schema v4、追加式来源版本、结构化提案、固定 IPC 与世界观/人物/大纲页面实施。
+
+- 2026-08-11：阶段 4 生产验收将 Zod 内联到 sandbox CommonJS preload，避免第三方 `require` 使全部固定 bridge 在真实窗口中失效。
+
+- 2026-08-11：阶段 4 Task 1–10 本地交接完成；两轮复审问题均已修复，终审无剩余 Critical/Important，完整本地门禁通过，等待用户确认后普通快进推送。
+
 ## 技术栈
 
 - Electron

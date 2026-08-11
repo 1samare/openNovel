@@ -19,6 +19,7 @@ import {
   buildAgentInvokeExpression,
   buildNamedApiInvokeExpression,
   EXPECTED_AGENT_API_KEYS,
+  EXPECTED_BIBLE_API_KEYS,
   EXPECTED_CHAPTER_API_KEYS,
   EXPECTED_LIFECYCLE_API_KEYS,
   EXPECTED_MODEL_API_KEYS,
@@ -160,12 +161,19 @@ test('builds an isolated page expression for invoking a named Agent API', () => 
     'cancelConnectionTest', 'getBindings', 'listConnections', 'listModels', 'listProfiles',
     'saveBindings', 'saveConnection', 'saveProfile', 'testConnection'
   ])
+  assert.deepEqual(EXPECTED_BIBLE_API_KEYS, [
+    'cancelGeneration', 'decideProposal', 'generateProposals', 'getSnapshot', 'listVersions',
+    'moveOutlineNode', 'restoreVersion', 'saveEntry', 'saveOutlineNode', 'saveProfile'
+  ])
   const chapterExpression = buildNamedApiInvokeExpression('chapters', 'list', [])
   assert.match(chapterExpression, /window\.openNovel\[['"]chapters['"]\]/)
   assert.match(chapterExpression, /list/)
   const modelExpression = buildNamedApiInvokeExpression('models', 'listConnections', [])
   assert.match(modelExpression, /window\.openNovel\[['"]models['"]\]/)
   assert.match(modelExpression, /listConnections/)
+  const bibleExpression = buildNamedApiInvokeExpression('novelBible', 'getSnapshot', [])
+  assert.match(bibleExpression, /window\.openNovel\[['"]novelBible['"]\]/)
+  assert.match(bibleExpression, /getSnapshot/)
 })
 
 test('rejects plaintext secrets in persisted model artifacts before smoke cleanup', async (t) => {

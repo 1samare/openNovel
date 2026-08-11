@@ -17,6 +17,8 @@ import { createChapterRuntime, type ChapterDialogs } from './chapter-runtime.ts'
 import type { ExportFormat } from '../shared/chapter.ts'
 import { registerModelIpcHandlers } from './model-ipc.ts'
 import { startModelRuntime } from './model-runtime.ts'
+import { registerBibleIpcHandlers } from './bible-ipc.ts'
+import { createBibleRuntime } from './bible-runtime.ts'
 import {
   createRendererFlushCoordinator,
   destroyWindowsForForcedExit,
@@ -166,10 +168,12 @@ let disposeAgentRuntime = (): void => undefined
 let disposeRendererFlushRuntime = (): void => undefined
 let flushActiveRenderers = async (): Promise<boolean> => true
 let shutdownModelRuntime = async (): Promise<void> => undefined
+let shutdownBibleRuntime = async (): Promise<void> => undefined
 let shutdownProjectRuntime = async (): Promise<void> => undefined
 const shutdownApplicationResources = async (): Promise<void> => {
   disposeAgentRuntime()
   disposeRendererFlushRuntime()
+  await shutdownBibleRuntime()
   await shutdownModelRuntime()
   await shutdownProjectRuntime()
 }
@@ -239,11 +243,20 @@ app.whenReady().then(async () => {
     dialogs: chapterDialogs,
     senderPolicy: policy
   })
+  const bibleRuntime = createBibleRuntime({
+    project: projectService,
+    coauthor: modelRuntime.structuredCoauthor,
+    senderPolicy: policy
+  })
+  shutdownBibleRuntime = () => bibleRuntime.close()
   const projectRuntime = createProjectRuntime({
     service: projectService,
     dialogs: projectDialogs,
     senderPolicy: policy,
-    beforeProjectClose: () => chapterRuntime.close()
+    beforeProjectClose: async () => {
+      await bibleRuntime.close()
+      await chapterRuntime.close()
+    }
   })
   shutdownProjectRuntime = async () => {
     await chapterRuntime.close()
@@ -256,7 +269,9 @@ app.whenReady().then(async () => {
       const disposeProjectIpc = registerProjectIpcHandlers(ipcMain, projectRuntime)
       const disposeChapterIpc = registerChapterIpcHandlers(ipcMain, chapterRuntime)
       const disposeModelIpc = registerModelIpcHandlers(ipcMain, modelRuntime)
+      const disposeBibleIpc = registerBibleIpcHandlers(ipcMain, bibleRuntime)
       return () => {
+        disposeBibleIpc()
         disposeModelIpc()
         disposeChapterIpc()
         disposeProjectIpc()

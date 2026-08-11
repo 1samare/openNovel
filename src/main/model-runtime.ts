@@ -12,8 +12,11 @@ import {
   type ProviderModelOption,
   type SaveModelBindingsInput,
   type SaveModelProfileInput,
-  type SaveProviderConnectionInput
+  type SaveProviderConnectionInput,
+  type StructuredGenerationRequest,
+  type StructuredGenerationResult
 } from '../shared/model.ts'
+import type { StructuredCoauthorPort } from '../novel/proposal-service.ts'
 import { DefaultModelGateway } from '../model/model-gateway.ts'
 import { ModelRepository } from '../model/model-repository.ts'
 import {
@@ -43,10 +46,12 @@ export type ModelGatewayPort = {
     signal: AbortSignal
   ): Promise<ConnectionTestResult>
   listModels(connectionId: string, signal: AbortSignal): Promise<ProviderModelOption[]>
+  generateObject<T>(request: StructuredGenerationRequest<T>): Promise<StructuredGenerationResult<T>>
 }
 
 export type ModelRuntime = {
   senderPolicy: AgentSenderPolicy
+  structuredCoauthor: StructuredCoauthorPort
   listConnections(): Promise<ModelResult<ProviderConnectionSummary[]>>
   saveConnection(input: SaveProviderConnectionInput): Promise<ModelResult<ProviderConnectionSummary>>
   testConnection(input: {
@@ -107,8 +112,72 @@ export const createModelRuntime = (options: {
     return pending
   }
 
+  const trackInternal = <T>(operation: () => Promise<T>): Promise<T> => {
+    if (shuttingDown) {
+      return Promise.reject(new ModelDomainError('MODEL_CANCELLED', 'Model runtime is shut down'))
+    }
+    const pending = operation()
+    active.add(pending)
+    void pending.then(
+      () => active.delete(pending),
+      () => active.delete(pending)
+    )
+    return pending
+  }
+
+  const structuredCoauthor: StructuredCoauthorPort = {
+    generate: (input) => {
+      const controller = new AbortController()
+      const onAbort = () => controller.abort()
+      input.signal.addEventListener('abort', onAbort, { once: true })
+      if (input.signal.aborted) controller.abort()
+      networkControllers.add(controller)
+      return trackInternal(async () => {
+        const mode = input.mode ?? 'standard'
+        const bindings = await options.service.getBindings()
+        const route = bindings.roleBindings.find((item) => (
+          item.role === input.role && item.mode === mode
+        )) ?? bindings.modeDefaults.find((item) => item.mode === mode)
+        if (route === undefined) {
+          throw new ModelDomainError('MODEL_NOT_CONFIGURED', 'No model route is configured')
+        }
+        const profileIds = [route.primaryProfileId, ...route.fallbackProfileIds]
+        let lastError: ModelDomainError | undefined
+        for (const profileId of profileIds) {
+          if (controller.signal.aborted) {
+            throw new ModelDomainError('MODEL_CANCELLED', 'Model operation was cancelled')
+          }
+          try {
+            const result = await options.gateway.generateObject<unknown>({
+              profileId,
+              prompt: input.prompt,
+              system: input.system,
+              schema: input.schema,
+              signal: controller.signal
+            })
+            return result.value
+          } catch (error) {
+            const domain = error instanceof ModelDomainError
+              ? error
+              : new ModelDomainError('MODEL_OPERATION_FAILED', 'Model operation failed')
+            if (domain.code === 'MODEL_CANCELLED' || domain.code === 'MODEL_CONTENT_BLOCKED' ||
+              domain.code === 'MODEL_INVALID_STRUCTURE') {
+              throw domain
+            }
+            lastError = domain
+          }
+        }
+        throw lastError ?? new ModelDomainError('MODEL_NOT_CONFIGURED', 'No model route is configured')
+      }).finally(() => {
+        input.signal.removeEventListener('abort', onAbort)
+        networkControllers.delete(controller)
+      })
+    }
+  }
+
   const runtime: ModelRuntime = {
     senderPolicy: options.senderPolicy,
+    structuredCoauthor,
     listConnections: () => track(() => options.service.listConnections()),
     saveConnection: (input) => track(() => options.service.saveConnection(input)),
     testConnection: (input) => {

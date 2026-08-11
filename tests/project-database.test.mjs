@@ -7,6 +7,7 @@ import test from 'node:test'
 import { DatabaseSync } from 'node:sqlite'
 
 import { DatabaseWorkerClient } from '../src/novel/database-worker.ts'
+import { PROJECT_MIGRATIONS } from '../src/novel/schema.ts'
 import { ProjectDomainError } from '../src/shared/project.ts'
 
 class ControlledWorker extends EventEmitter {
@@ -30,7 +31,7 @@ const hasCode = (code) => (error) => {
   return true
 }
 
-test('opens schema version three with durable SQLite pragmas, chapter tables, and model bindings', async (t) => {
+test('opens schema version four with durable SQLite pragmas and novel Bible tables', async (t) => {
   const sandbox = await mkdtemp(join(tmpdir(), 'open-novel-database-'))
 
   const client = await DatabaseWorkerClient.open(join(sandbox, 'project.sqlite3'))
@@ -41,7 +42,7 @@ test('opens schema version three with durable SQLite pragmas, chapter tables, an
 
   assert.deepEqual(await client.health(), {
     quickCheck: 'ok',
-    userVersion: 3,
+    userVersion: 4,
     journalMode: 'wal',
     foreignKeys: 1,
     busyTimeout: 5000
@@ -54,16 +55,37 @@ test('opens schema version three with durable SQLite pragmas, chapter tables, an
   assert.deepEqual(tables, [
     { name: 'agent_role_bindings' },
     { name: 'audit_events' },
+    { name: 'bible_proposal_conflicts' },
+    { name: 'bible_proposal_impacts' },
+    { name: 'bible_proposals' },
+    { name: 'bible_source_versions' },
     { name: 'chapter_drafts' },
+    { name: 'chapter_plans' },
     { name: 'chapter_versions' },
     { name: 'chapters' },
+    { name: 'character_relationships' },
+    { name: 'character_states' },
+    { name: 'characters' },
     { name: 'export_jobs' },
+    { name: 'factions' },
+    { name: 'foreshadows' },
     { name: 'generation_mode_defaults' },
     { name: 'import_jobs' },
+    { name: 'items' },
+    { name: 'locations' },
+    { name: 'novel_profiles' },
     { name: 'project_settings' },
     { name: 'projects' },
-    { name: 'schema_migrations' }
+    { name: 'schema_migrations' },
+    { name: 'story_outlines' },
+    { name: 'story_stages' },
+    { name: 'story_volumes' },
+    { name: 'timeline_events' },
+    { name: 'world_settings' }
   ])
+
+  const versionColumns = await client.all('PRAGMA table_info(bible_source_versions)')
+  assert.equal(versionColumns.some((column) => column.name === 'restored_from_version_id'), true)
 
   const indexes = await client.all(`
     SELECT name FROM sqlite_master
@@ -95,6 +117,48 @@ test('opens schema version three with durable SQLite pragmas, chapter tables, an
      VALUES (?, ?, NULL, 'chapter', ?, 0, ?, ?)`,
     ['root-two', 'project-root-unique', '第二章', '2026-08-10T03:00:00.000Z', '2026-08-10T03:00:00.000Z']
   ), hasCode('DATABASE_WORKER_FAILED'))
+})
+
+test('migrates a populated version-three project to version four without changing existing data', async (t) => {
+  const sandbox = await mkdtemp(join(tmpdir(), 'open-novel-v3-migration-'))
+  const databasePath = join(sandbox, 'project.sqlite3')
+  const legacy = await DatabaseWorkerClient.open(databasePath, PROJECT_MIGRATIONS.slice(0, 3))
+  await legacy.transaction([
+    {
+      sql: `INSERT INTO projects (id, title, created_at, updated_at) VALUES (?, ?, ?, ?)`,
+      params: ['project-legacy-v3', '旧版项目', '2026-08-10T01:00:00.000Z', '2026-08-10T01:00:00.000Z']
+    },
+    {
+      sql: `INSERT INTO chapters (id, project_id, parent_id, kind, title, position, current_version_id, created_at, updated_at)
+            VALUES (?, ?, NULL, 'volume', ?, 0, NULL, ?, ?)`,
+      params: ['chapter-volume-v3', 'project-legacy-v3', '第一卷', '2026-08-10T01:00:00.000Z', '2026-08-10T01:00:00.000Z']
+    },
+    {
+      sql: `INSERT INTO agent_role_bindings (
+              role, mode, primary_profile_id, fallback_profile_ids_json,
+              allow_cross_provider_fallback, updated_at
+            ) VALUES ('character', 'standard', 'profile-legacy', '[]', 0, ?)`,
+      params: ['2026-08-10T01:00:00.000Z']
+    }
+  ])
+  await legacy.close()
+
+  const migrated = await DatabaseWorkerClient.open(databasePath)
+  t.after(async () => {
+    await migrated.close()
+    await rm(sandbox, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 })
+  })
+  assert.equal((await migrated.health()).userVersion, 4)
+  assert.deepEqual(await migrated.get('SELECT id, title FROM projects WHERE id = ?', ['project-legacy-v3']), {
+    id: 'project-legacy-v3', title: '旧版项目'
+  })
+  assert.deepEqual(await migrated.get('SELECT id, title FROM chapters WHERE id = ?', ['chapter-volume-v3']), {
+    id: 'chapter-volume-v3', title: '第一卷'
+  })
+  assert.deepEqual(await migrated.get(
+    'SELECT role, mode, primary_profile_id FROM agent_role_bindings WHERE role = ? AND mode = ?',
+    ['character', 'standard']
+  ), { role: 'character', mode: 'standard', primary_profile_id: 'profile-legacy' })
 })
 
 test('rolls back a failed transaction without partially writing audit data', async (t) => {

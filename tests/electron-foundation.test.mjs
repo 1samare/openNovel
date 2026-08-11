@@ -20,6 +20,7 @@ test('沙箱 Preload 显式构建为 CommonJS 工件', async () => {
 
   assert.match(source, /preload:\s*\{[\s\S]*?rollupOptions:\s*\{[\s\S]*?output:\s*\{[\s\S]*?format:\s*'cjs'/)
   assert.match(source, /entryFileNames:\s*'\[name\]\.cjs'/)
+  assert.match(source, /externalizeDeps:\s*\{[\s\S]*?exclude:\s*\[[\s\S]*?'zod'/)
 })
 
 test('主进程持有活动窗口引用直到窗口关闭', async () => {

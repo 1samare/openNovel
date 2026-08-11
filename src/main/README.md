@@ -6,14 +6,16 @@
 
 ## 内容说明
 
-- `index.ts`：创建安全窗口；恢复完成后才注册 Agent/Project/Chapter/Model IPC 与创建窗口；组合系统项目目录、文件对话框、safeStorage 密钥根和陈旧锁对话框；引用 CommonJS preload；退出时先等待活动渲染器保存，再依次释放模型、章节与项目 SQLite Worker。
+- `index.ts`：创建安全窗口；恢复完成后才注册 Agent/Project/Chapter/Model/Bible IPC 与创建窗口；组合系统项目目录、文件对话框、safeStorage 密钥根和陈旧锁对话框；引用 CommonJS preload；退出时先等待活动渲染器保存，再依次中止 Bible 共创、释放模型、章节与项目 SQLite Worker。
 - `agent-runtime.ts`：组合 JSON 仓储、可注入 delay 的 Mock Executor 和 Orchestrator；提供可等待的启动顺序，以及仅在授权页面完成加载后附着、销毁或关闭时解绑的事件转发。
 - `agent-ipc.ts`：为七个固定 Agent 命令注册授权、参数校验和安全错误序列化包装器；注册幂等并返回所有权安全的 disposer。
 - `agent-ipc-security.ts`：只接受当前顶层应用 `file:` document 的 hash 路由；production 将完整序列化 URL 仅去除 hash 后精确比较，因此拒绝普通和空 query；开发服务器 origin 行为保持无凭据精确匹配，并拒绝销毁/异常 frame 与未授权页面。
 - `agent-logger.ts`：仅输出 Run ID、状态、事件类型、耗时、错误码和操作名的结构化日志。
 - `model-logger.ts`：从 Gateway 输入重建固定模型调用元数据白名单，再交给注入的 Repository sink，拒绝附带 Prompt、正文、密钥、推理或响应体。
-- `model-runtime.ts`：组合 safeStorage 密钥库、控制库仓储、ModelService、Provider Registry、Gateway 和日志；锁定/取消连接测试，并在关闭时中止和等待活动模型调用。
+- `model-runtime.ts`：组合 safeStorage 密钥库、控制库仓储、ModelService、Provider Registry、Gateway 和日志；锁定/取消连接测试，并在关闭时中止和等待活动模型调用；内部结构化共创端口按角色优先、模式默认和已校验 fallback 解析 Profile，不扩展 renderer Model IPC。
 - `model-ipc.ts`：为九个固定模型命令注册 sender/精确参数守卫、重复注册所有权和脱敏结果包装器。
+- `bible-runtime.ts`：按活动项目惰性持有 Bible 仓储和提案服务，以项目 epoch 即时取消旧项目生成，协调请求锁、关闭期间新命令拒绝、同项目关闭封锁、资源等待与脱敏错误。
+- `bible-ipc.ts`：为十个固定小说圣经命令注册 sender/精确参数/结果守卫和幂等 disposer。
 - `project-runtime.ts`：把系统目录选择、最近项目授权、陈旧锁确认、错误脱敏和等待失败提示的 async shutdown gate 组合为项目 runtime。
 - `project-ipc.ts`：为九个固定项目命令注册 sender/参数守卫，并返回结构化项目结果。
 - `chapter-ipc.ts`：为十三个固定章节、版本与文件交换命令注册 sender/参数守卫，并拒绝任意路径参数。
@@ -47,3 +49,6 @@
 - 2026-08-10：二次复审让“明确放弃并退出”在资源释放后直接销毁窗口，绕过仍会阻止关闭的 renderer `beforeunload` 保存门禁。
 - 2026-08-10：阶段 3 增加模型调用白名单日志器，只接受连接/Profile/模型、耗时、token、重试和安全错误元数据。
 - 2026-08-10：阶段 3 接入 safeStorage 模型 runtime、九个固定 Model IPC，以及先取消等待模型调用、再关闭项目资源的应用退出顺序。
+- 2026-08-11：Model runtime 增加仅供主进程组合的三专业角色结构化生成端口，复用阶段 3 已确认的 Profile fallback 配置。
+- 2026-08-11：新增活动项目 Bible runtime 与十命令 IPC；项目关闭/切换和应用退出会先取消等待结构化共创，再释放仓储与模型资源。
+- 2026-08-11：退出复审为 Bible runtime 增加活动项目订阅/epoch 和 closing 门禁；项目身份变化无需等待下一次 Bible 命令即可中止生成，关闭开始后不再接纳新写入。

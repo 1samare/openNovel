@@ -135,6 +135,187 @@ export const PROJECT_MIGRATIONS: readonly DatabaseMigration[] = [
       CREATE INDEX idx_agent_role_bindings_profile
         ON agent_role_bindings(primary_profile_id);
     `
+  },
+  {
+    version: 4,
+    name: 'novel-bible-and-structured-coauthoring',
+    sql: `
+      CREATE TABLE bible_source_versions (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        entity_type TEXT NOT NULL CHECK (entity_type IN (
+          'novel-profile', 'world-setting', 'location', 'faction', 'item',
+          'character', 'relationship', 'character-state', 'timeline-event',
+          'foreshadow', 'story', 'volume', 'stage', 'chapter-plan'
+        )),
+        entity_id TEXT NOT NULL,
+        version_number INTEGER NOT NULL CHECK (version_number > 0),
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        source_kind TEXT NOT NULL CHECK (source_kind IN ('user', 'agent', 'restore')),
+        source_run_id TEXT,
+        proposal_id TEXT,
+        snapshot_json TEXT NOT NULL,
+        supersedes_version_id TEXT,
+        restored_from_version_id TEXT,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        FOREIGN KEY (supersedes_version_id) REFERENCES bible_source_versions(id) ON DELETE SET NULL,
+        FOREIGN KEY (restored_from_version_id) REFERENCES bible_source_versions(id) ON DELETE SET NULL,
+        UNIQUE (entity_type, entity_id, version_number)
+      );
+      CREATE TABLE novel_profiles (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL UNIQUE,
+        genre TEXT NOT NULL CHECK (genre IN ('urban-campus', 'sci-fi-future')),
+        audience TEXT NOT NULL,
+        theme TEXT NOT NULL,
+        narrative_pov TEXT NOT NULL,
+        tone TEXT NOT NULL,
+        style_sample TEXT NOT NULL,
+        banned_expressions_json TEXT NOT NULL DEFAULT '[]',
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      );
+      CREATE TABLE world_settings (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL,
+        fields_json TEXT NOT NULL DEFAULT '[]', related_entity_ids_json TEXT NOT NULL DEFAULT '[]',
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      );
+      CREATE TABLE locations (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL,
+        fields_json TEXT NOT NULL DEFAULT '[]', related_entity_ids_json TEXT NOT NULL DEFAULT '[]',
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      );
+      CREATE TABLE factions (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL,
+        fields_json TEXT NOT NULL DEFAULT '[]', related_entity_ids_json TEXT NOT NULL DEFAULT '[]',
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      );
+      CREATE TABLE items (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL,
+        fields_json TEXT NOT NULL DEFAULT '[]', related_entity_ids_json TEXT NOT NULL DEFAULT '[]',
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      );
+      CREATE TABLE characters (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL,
+        fields_json TEXT NOT NULL DEFAULT '[]', related_entity_ids_json TEXT NOT NULL DEFAULT '[]',
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      );
+      CREATE TABLE character_relationships (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL,
+        fields_json TEXT NOT NULL DEFAULT '[]', related_entity_ids_json TEXT NOT NULL DEFAULT '[]',
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      );
+      CREATE TABLE character_states (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL,
+        fields_json TEXT NOT NULL DEFAULT '[]', related_entity_ids_json TEXT NOT NULL DEFAULT '[]',
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      );
+      CREATE TABLE timeline_events (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL,
+        fields_json TEXT NOT NULL DEFAULT '[]', related_entity_ids_json TEXT NOT NULL DEFAULT '[]',
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      );
+      CREATE TABLE foreshadows (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL,
+        fields_json TEXT NOT NULL DEFAULT '[]', related_entity_ids_json TEXT NOT NULL DEFAULT '[]',
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      );
+      CREATE TABLE story_outlines (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, title TEXT NOT NULL, summary TEXT NOT NULL,
+        goal TEXT NOT NULL, conflict TEXT NOT NULL, turning_point TEXT NOT NULL, hook TEXT NOT NULL,
+        target_words INTEGER NOT NULL CHECK (target_words >= 0),
+        participant_character_ids_json TEXT NOT NULL DEFAULT '[]', position INTEGER NOT NULL CHECK (position >= 0),
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        UNIQUE (project_id, position)
+      );
+      CREATE TABLE story_volumes (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, story_outline_id TEXT NOT NULL,
+        title TEXT NOT NULL, summary TEXT NOT NULL, goal TEXT NOT NULL, conflict TEXT NOT NULL,
+        turning_point TEXT NOT NULL, hook TEXT NOT NULL, target_words INTEGER NOT NULL CHECK (target_words >= 0),
+        participant_character_ids_json TEXT NOT NULL DEFAULT '[]', position INTEGER NOT NULL CHECK (position >= 0),
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        FOREIGN KEY (story_outline_id) REFERENCES story_outlines(id) ON DELETE CASCADE,
+        UNIQUE (story_outline_id, position)
+      );
+      CREATE TABLE story_stages (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, story_volume_id TEXT NOT NULL,
+        title TEXT NOT NULL, summary TEXT NOT NULL, goal TEXT NOT NULL, conflict TEXT NOT NULL,
+        turning_point TEXT NOT NULL, hook TEXT NOT NULL, target_words INTEGER NOT NULL CHECK (target_words >= 0),
+        participant_character_ids_json TEXT NOT NULL DEFAULT '[]', position INTEGER NOT NULL CHECK (position >= 0),
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        FOREIGN KEY (story_volume_id) REFERENCES story_volumes(id) ON DELETE CASCADE,
+        UNIQUE (story_volume_id, position)
+      );
+      CREATE TABLE chapter_plans (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, story_stage_id TEXT NOT NULL, chapter_id TEXT,
+        title TEXT NOT NULL, summary TEXT NOT NULL, goal TEXT NOT NULL, conflict TEXT NOT NULL,
+        turning_point TEXT NOT NULL, hook TEXT NOT NULL, target_words INTEGER NOT NULL CHECK (target_words >= 0),
+        participant_character_ids_json TEXT NOT NULL DEFAULT '[]', position INTEGER NOT NULL CHECK (position >= 0),
+        authority_status TEXT NOT NULL CHECK (authority_status IN ('user_confirmed', 'approved')),
+        current_version_id TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        FOREIGN KEY (story_stage_id) REFERENCES story_stages(id) ON DELETE CASCADE,
+        FOREIGN KEY (chapter_id) REFERENCES chapters(id) ON DELETE SET NULL,
+        UNIQUE (story_stage_id, position)
+      );
+      CREATE TABLE bible_proposals (
+        id TEXT PRIMARY KEY, project_id TEXT NOT NULL, source_run_id TEXT NOT NULL,
+        schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+        domain TEXT NOT NULL CHECK (domain IN ('setting', 'character', 'plot')),
+        status TEXT NOT NULL CHECK (status IN ('proposed', 'approved', 'rejected', 'superseded')),
+        target_entity_type TEXT NOT NULL, target_entity_id TEXT, source_version_id TEXT,
+        source_version_ids_json TEXT NOT NULL DEFAULT '[]', candidate_json TEXT NOT NULL,
+        decided_at TEXT, superseded_by_id TEXT, created_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        FOREIGN KEY (superseded_by_id) REFERENCES bible_proposals(id) ON DELETE SET NULL
+      );
+      CREATE TABLE bible_proposal_conflicts (
+        id TEXT PRIMARY KEY, proposal_id TEXT NOT NULL, field TEXT NOT NULL,
+        old_value TEXT NOT NULL, new_value TEXT NOT NULL, source_version_id TEXT NOT NULL,
+        affected_entity_ids_json TEXT NOT NULL DEFAULT '[]',
+        FOREIGN KEY (proposal_id) REFERENCES bible_proposals(id) ON DELETE CASCADE
+      );
+      CREATE TABLE bible_proposal_impacts (
+        proposal_id TEXT NOT NULL, entity_id TEXT NOT NULL,
+        PRIMARY KEY (proposal_id, entity_id),
+        FOREIGN KEY (proposal_id) REFERENCES bible_proposals(id) ON DELETE CASCADE
+      );
+      CREATE INDEX idx_bible_versions_entity ON bible_source_versions(entity_type, entity_id, version_number DESC);
+      CREATE INDEX idx_bible_versions_project_status ON bible_source_versions(project_id, authority_status);
+      CREATE INDEX idx_bible_proposals_project_status ON bible_proposals(project_id, status, created_at DESC);
+      CREATE INDEX idx_world_settings_project ON world_settings(project_id, updated_at DESC);
+      CREATE INDEX idx_characters_project ON characters(project_id, updated_at DESC);
+      CREATE INDEX idx_timeline_events_project ON timeline_events(project_id, updated_at DESC);
+      CREATE INDEX idx_foreshadows_project ON foreshadows(project_id, updated_at DESC);
+    `
   }
 ]
 

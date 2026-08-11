@@ -5,6 +5,7 @@ import type { ProjectApi } from '@shared/project'
 import type { ChapterApi } from '@shared/chapter'
 import type { RendererFlushApi } from '@shared/renderer-flush'
 import type { ModelApi } from '@shared/model'
+import type { NovelBibleApi } from '@shared/novel'
 
 declare global {
   interface Window {
@@ -13,6 +14,7 @@ declare global {
       projects: ProjectApi
       chapters: ChapterApi
       models: ModelApi
+      novelBible: NovelBibleApi
       lifecycle: RendererFlushApi
     }
   }

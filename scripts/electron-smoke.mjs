@@ -72,6 +72,18 @@ export const EXPECTED_MODEL_API_KEYS = [
   'saveProfile',
   'testConnection'
 ]
+export const EXPECTED_BIBLE_API_KEYS = [
+  'cancelGeneration',
+  'decideProposal',
+  'generateProposals',
+  'getSnapshot',
+  'listVersions',
+  'moveOutlineNode',
+  'restoreVersion',
+  'saveEntry',
+  'saveOutlineNode',
+  'saveProfile'
+]
 export const EXPECTED_LIFECYCLE_API_KEYS = ['completeFlush', 'onFlushRequest']
 
 const SMOKE_MODEL_ID = 'smoke-model'
@@ -165,9 +177,11 @@ export const assertNoPlaintextModelArtifacts = async (userDataDir, secret) => {
 const startFakeModelProvider = async () => {
   const server = createServer(async (request, response) => {
     try {
-      for await (const _chunk of request) {
-        // Drain the request before responding so Electron can reuse the loopback connection.
-      }
+      const chunks = []
+      for await (const chunk of request) chunks.push(chunk)
+      const body = chunks.length === 0
+        ? {}
+        : JSON.parse(Buffer.concat(chunks).toString('utf8'))
       if (request.headers.authorization !== `Bearer ${SMOKE_MODEL_SECRET}`) {
         response.writeHead(401, { 'content-type': 'application/json' })
         response.end(JSON.stringify({ error: { code: 'invalid_api_key' } }))
@@ -179,6 +193,97 @@ const startFakeModelProvider = async () => {
         return
       }
       if (request.method === 'POST' && request.url === '/v1/chat/completions') {
+        const serialized = JSON.stringify(body)
+        const replacement = /SMOKE_REPLACE entity=([A-Za-z0-9_-]+) version=([A-Za-z0-9_-]+) genre=(urban-campus|sci-fi-future)/.exec(serialized)
+        const rejection = /SMOKE_REJECT genre=(urban-campus|sci-fi-future)/.exec(serialized)
+        const character = /SMOKE_CHARACTER genre=(urban-campus|sci-fi-future)/.exec(serialized)
+        const plot = /SMOKE_PLOT parent=([A-Za-z0-9_-]+) character=([A-Za-z0-9_-]+) position=([0-9]+) genre=(urban-campus|sci-fi-future)/.exec(serialized)
+        let content = 'OK'
+        if (replacement !== null) {
+          const [, entityId, versionId, genre] = replacement
+          content = JSON.stringify({
+            proposals: [{
+              operation: 'update',
+              targetEntityId: entityId,
+              sourceVersionId: versionId,
+              title: `${genre} 结构化替代`,
+              rationale: '以明确规则强化题材辨识度',
+              impact: '更新世界核心约束并影响前三章行动',
+              priority: 5,
+              affectedEntityIds: [entityId],
+              conflicts: [{
+                field: 'summary',
+                oldValue: '手工确认的初始规则',
+                newValue: '经用户确认的结构化规则',
+                sourceVersionId: versionId,
+                affectedEntityIds: [entityId]
+              }],
+              entry: {
+                kind: 'world-setting',
+                title: `${genre} 核心规则`,
+                summary: '经用户确认的结构化规则',
+                fields: [{ key: 'constraint', label: '约束', value: '规则必须在前三章产生可观察代价' }],
+                relatedEntityIds: []
+              }
+            }]
+          })
+        } else if (character !== null) {
+          const genre = character[1]
+          const name = genre === 'urban-campus' ? '林夏' : '顾星河'
+          content = JSON.stringify({
+            proposals: [{
+              operation: 'create', targetEntityId: null, sourceVersionId: null,
+              title: `${name}人物档案`, rationale: '建立承担前三章选择的主要人物',
+              impact: '约束人物目标、代价与章节行动', priority: 5,
+              affectedEntityIds: [], conflicts: [],
+              entry: {
+                kind: 'character', title: name, summary: '承担前三章核心选择的主要人物',
+                fields: [{ key: 'goal', label: '目标', value: '查明异常并保护同伴' }],
+                relatedEntityIds: []
+              }
+            }]
+          })
+        } else if (plot !== null) {
+          const [, parentId, characterId, rawPosition, genre] = plot
+          const position = Number(rawPosition)
+          content = JSON.stringify({
+            proposals: [{
+              operation: 'create', targetEntityId: null, sourceVersionId: null,
+              title: `${genre} 第${position + 1}章规划`, rationale: '用结构化目标推进前三章因果链',
+              impact: '明确本章目标、冲突、转折和钩子', priority: 5,
+              affectedEntityIds: [parentId, characterId], conflicts: [],
+              outline: {
+                kind: 'chapter-plan', parentId, title: `第${position + 1}章规划`,
+                summary: '阶段四结构化共创章节规划', goal: '建立目标与代价',
+                conflict: '主角必须在真相和安全之间选择', turningPoint: '第一条可靠证据出现',
+                hook: '证据指向更大的秘密', targetWords: 2000,
+                participantCharacterIds: [characterId], position
+              }
+            }]
+          })
+        } else if (rejection !== null) {
+          const genre = rejection[1]
+          content = JSON.stringify({
+            proposals: [{
+              operation: 'create',
+              targetEntityId: null,
+              sourceVersionId: null,
+              title: `${genre} 待拒绝候选`,
+              rationale: '用于验证拒绝隔离',
+              impact: '若批准将增加一条世界设定',
+              priority: 3,
+              affectedEntityIds: [],
+              conflicts: [],
+              entry: {
+                kind: 'world-setting',
+                title: `${genre} 待拒绝候选`,
+                summary: '这条候选不得进入权威资料',
+                fields: [],
+                relatedEntityIds: []
+              }
+            }]
+          })
+        }
         response.writeHead(200, {
           'content-type': 'application/json',
           'x-request-id': 'smoke-provider-request'
@@ -190,7 +295,7 @@ const startFakeModelProvider = async () => {
           model: SMOKE_MODEL_ID,
           choices: [{
             index: 0,
-            message: { role: 'assistant', content: 'OK' },
+            message: { role: 'assistant', content },
             finish_reason: 'stop'
           }],
           usage: { prompt_tokens: 2, completion_tokens: 1, total_tokens: 3 }
@@ -275,12 +380,19 @@ const installEventProbe = async (session) => {
 
 const verifyNamedApi = async (session, namespace, expectedKeys, label) => {
   const expectedKeysJson = JSON.stringify(expectedKeys)
-  const keys = await waitFor(async () => {
-    const actual = await session.cdp.evaluate(
-      `Object.keys(window.openNovel?.[${JSON.stringify(namespace)}] ?? {}).sort()`
-    )
-    return JSON.stringify(actual) === expectedKeysJson ? actual : undefined
-  }, label, START_TIMEOUT_MS)
+  let observedKeys = []
+  let keys
+  try {
+    keys = await waitFor(async () => {
+      const actual = await session.cdp.evaluate(
+        `Object.keys(window.openNovel?.[${JSON.stringify(namespace)}] ?? {}).sort()`
+      )
+      observedKeys = actual
+      return JSON.stringify(actual) === expectedKeysJson ? actual : undefined
+    }, label, START_TIMEOUT_MS)
+  } catch (error) {
+    throw new Error(`${error.message}; observed ${namespace} keys: ${JSON.stringify(observedKeys)}`)
+  }
   assert.deepEqual(keys, expectedKeys)
 
   const allFunctions = await session.cdp.evaluate(`(() => {
@@ -291,6 +403,11 @@ const verifyNamedApi = async (session, namespace, expectedKeys, label) => {
 }
 
 const assertModelSuccess = (result, label) => {
+  assert.equal(result?.ok, true, `${label} must succeed`)
+  return result.data
+}
+
+const assertBibleSuccess = (result, label) => {
   assert.equal(result?.ok, true, `${label} must succeed`)
   return result.data
 }
@@ -358,23 +475,33 @@ const verifyModelApi = async (session, modelBaseUrl) => {
   const bindings = await session.cdp.evaluate(buildNamedApiInvokeExpression('models', 'getBindings', []))
   assert.equal(bindings?.ok, false, 'models.getBindings must fail safely before opening a project')
   assert.equal(bindings?.error?.code, 'MODEL_OPERATION_FAILED')
+  return profiles[0]
 }
 
-const verifyPreloadApis = async (session, modelBaseUrl) => {
+const verifyPreloadApis = async (session, modelBaseUrl, expectedProjectIds) => {
   await verifyNamedApi(session, 'agent', EXPECTED_AGENT_API_KEYS, 'the eight Preload Agent APIs')
   await verifyNamedApi(session, 'projects', EXPECTED_PROJECT_API_KEYS, 'the nine Preload Project APIs')
   await verifyNamedApi(session, 'chapters', EXPECTED_CHAPTER_API_KEYS, 'the thirteen Preload Chapter APIs')
   await verifyNamedApi(session, 'models', EXPECTED_MODEL_API_KEYS, 'the nine Preload Model APIs')
+  await verifyNamedApi(session, 'novelBible', EXPECTED_BIBLE_API_KEYS, 'the ten Preload Bible APIs')
   await verifyNamedApi(session, 'lifecycle', EXPECTED_LIFECYCLE_API_KEYS, 'the two Preload lifecycle APIs')
 
   const recent = await session.cdp.evaluate(buildNamedApiInvokeExpression('projects', 'listRecent', []))
   assert.equal(recent?.ok, true, 'projects.listRecent must succeed in an isolated profile')
-  assert.deepEqual(recent.data, [])
+  assert.deepEqual(
+    recent.data.map((project) => project.projectId).sort(),
+    [...expectedProjectIds].sort(),
+    'the two seeded smoke projects must be available'
+  )
   const chapters = await session.cdp.evaluate(buildNamedApiInvokeExpression('chapters', 'list', []))
   assert.equal(chapters?.ok, false, 'chapters.list must fail safely before opening a project')
   assert.equal(chapters?.error?.code, 'PROJECT_NOT_OPEN')
-  await verifyModelApi(session, modelBaseUrl)
+  const bible = await session.cdp.evaluate(buildNamedApiInvokeExpression('novelBible', 'getSnapshot', []))
+  assert.equal(bible?.ok, false, 'novelBible.getSnapshot must fail safely before opening a project')
+  assert.equal(bible?.error?.code, 'BIBLE_NOT_AVAILABLE')
+  const modelProfile = await verifyModelApi(session, modelBaseUrl)
   await installEventProbe(session)
+  return { recentProjects: recent.data, modelProfile }
 }
 
 const startSession = async (cwd, userDataDir, state) => {
@@ -389,14 +516,23 @@ const startSession = async (cwd, userDataDir, state) => {
   }
   try {
     const target = await waitForPageTarget({ port, timeoutMs: START_TIMEOUT_MS })
+    state.console.push(`page.target ${redactText(target.url)}`)
     session.cdp = await connectCdp(target.webSocketDebuggerUrl)
     session.cdp.on('Runtime.consoleAPICalled', (params) => {
       state.console.push(`console.${params.type ?? 'unknown'} args=${params.args?.length ?? 0}`)
     })
-    session.cdp.on('Runtime.exceptionThrown', () => {
-      state.console.push('runtime.exceptionThrown')
+    session.cdp.on('Runtime.exceptionThrown', (params) => {
+      const details = params.exceptionDetails ?? {}
+      const description = details.exception?.description ?? details.text ?? 'unknown exception'
+      state.console.push(`runtime.exceptionThrown ${redactText(description)}`)
     })
-    await verifyPreloadApis(session, state.modelBaseUrl)
+    const preload = await verifyPreloadApis(
+      session,
+      state.modelBaseUrl,
+      state.seededProjects.map((project) => project.projectId)
+    )
+    session.recentProjects = preload.recentProjects
+    session.modelProfile = preload.modelProfile
     state.sessions.push(session)
     return session
   } catch (error) {
@@ -417,6 +553,238 @@ const closeSession = async (session) => {
   }
   await waitForExit(session.processRecord, CLOSE_TIMEOUT_MS).catch(() => undefined)
   await terminateProcessTree(session.processRecord, CLOSE_TIMEOUT_MS)
+}
+
+const invokeNamed = (session, namespace, method, args = []) =>
+  session.cdp.evaluate(buildNamedApiInvokeExpression(namespace, method, args))
+
+const saveOutlineFixture = async (session, draft) => {
+  const snapshot = assertBibleSuccess(await invokeNamed(
+    session,
+    'novelBible',
+    'saveOutlineNode',
+    [{ nodeId: null, expectedVersionId: null, draft }]
+  ), `novelBible.saveOutlineNode ${draft.kind}`)
+  return snapshot.outline.find((node) => node.kind === draft.kind && node.title === draft.title)
+}
+
+const runBibleGenreScenario = async (session, state, project) => {
+  state.stage = `bible-${project.key}`
+  assertModelSuccess(
+    await invokeNamed(session, 'projects', 'openRecent', [project.projectId]),
+    `projects.openRecent ${project.key}`
+  )
+  const route = (role) => ({
+    role,
+    mode: 'standard',
+    primaryProfileId: session.modelProfile.id,
+    fallbackProfileIds: [],
+    allowCrossProviderFallback: false
+  })
+  assertModelSuccess(await invokeNamed(session, 'models', 'saveBindings', [{
+    modeDefaults: [],
+    roleBindings: ['setting', 'character', 'plot'].map(route),
+    confirmCrossProviderRouting: false
+  }]), `models.saveBindings ${project.key}`)
+
+  let snapshot = assertBibleSuccess(await invokeNamed(session, 'novelBible', 'saveProfile', [{
+    expectedVersionId: null,
+    draft: {
+      genre: project.key,
+      audience: '青年读者',
+      theme: project.key === 'urban-campus' ? '成长与选择' : '技术与人性',
+      narrativePov: '第三人称限知',
+      tone: '克制而有悬念',
+      styleSample: '风穿过走廊，留下尚未解答的回声。',
+      bannedExpressions: ['命运的齿轮']
+    }
+  }]), `novelBible.saveProfile ${project.key}`)
+  assert.equal(snapshot.profile.genre, project.key)
+
+  snapshot = assertBibleSuccess(await invokeNamed(session, 'novelBible', 'saveEntry', [{
+    entryId: null,
+    expectedVersionId: null,
+    draft: {
+      kind: 'world-setting',
+      title: `${project.key} 核心规则`,
+      summary: '手工确认的初始规则',
+      fields: [{ key: 'constraint', label: '约束', value: '所有异常都必须留下可验证线索' }],
+      relatedEntityIds: []
+    }
+  }]), `novelBible.saveEntry world ${project.key}`)
+  const world = snapshot.entries.find((entry) => entry.kind === 'world-setting')
+  assert.ok(world)
+  const initialWorldVersionId = world.currentVersionId
+
+  const characterProposals = assertBibleSuccess(await invokeNamed(
+    session, 'novelBible', 'generateProposals', [{
+      requestId: `smoke-character-${project.key}`, domain: 'character', mode: 'standard',
+      request: `SMOKE_CHARACTER genre=${project.key}`, targetEntityId: null
+    }]
+  ), `novelBible.generateProposals character ${project.key}`)
+  assert.equal(characterProposals.length, 1)
+  snapshot = assertBibleSuccess(await invokeNamed(session, 'novelBible', 'decideProposal', [{
+    proposalId: characterProposals[0].id, decision: 'approve', confirmReplacement: false
+  }]), `novelBible.decideProposal character ${project.key}`)
+  const character = snapshot.entries.find((entry) => entry.kind === 'character')
+  assert.ok(character)
+  assert.equal(character.authorityStatus, 'approved')
+
+  const outlineBase = {
+    summary: '阶段四生产验收大纲',
+    goal: '建立目标与代价',
+    conflict: '主角必须在真相和安全之间选择',
+    turningPoint: '第一条可靠证据出现',
+    hook: '证据指向更大的秘密',
+    targetWords: 2000,
+    participantCharacterIds: [character.id]
+  }
+  const story = await saveOutlineFixture(session, {
+    ...outlineBase, kind: 'story', parentId: null, title: '故事总纲', position: 0
+  })
+  assert.ok(story)
+  const volume = await saveOutlineFixture(session, {
+    ...outlineBase, kind: 'volume', parentId: story.id, title: '第一卷', position: 0
+  })
+  assert.ok(volume)
+  const stage = await saveOutlineFixture(session, {
+    ...outlineBase, kind: 'stage', parentId: volume.id, title: '开端阶段', position: 0
+  })
+  assert.ok(stage)
+  for (let index = 0; index < 3; index += 1) {
+    const plotProposals = assertBibleSuccess(await invokeNamed(
+      session, 'novelBible', 'generateProposals', [{
+        requestId: `smoke-plot-${project.key}-${index}`, domain: 'plot', mode: 'standard',
+        request: `SMOKE_PLOT parent=${stage.id} character=${character.id} position=${index} genre=${project.key}`,
+        targetEntityId: null
+      }]
+    ), `novelBible.generateProposals plot ${project.key} ${index}`)
+    assert.equal(plotProposals.length, 1)
+    snapshot = assertBibleSuccess(await invokeNamed(session, 'novelBible', 'decideProposal', [{
+      proposalId: plotProposals[0].id, decision: 'approve', confirmReplacement: false
+    }]), `novelBible.decideProposal plot ${project.key} ${index}`)
+    const chapter = snapshot.outline.find((node) => node.kind === 'chapter-plan' && node.position === index)
+    assert.ok(chapter)
+    assert.equal(chapter.authorityStatus, 'approved')
+  }
+
+  snapshot = assertBibleSuccess(await invokeNamed(session, 'novelBible', 'saveEntry', [{
+    entryId: world.id,
+    expectedVersionId: world.currentVersionId,
+    draft: {
+      kind: world.kind,
+      title: world.title,
+      summary: '手工编辑后的第二版规则',
+      fields: world.fields,
+      relatedEntityIds: world.relatedEntityIds
+    }
+  }]), `novelBible.saveEntry second version ${project.key}`)
+  let versions = assertBibleSuccess(await invokeNamed(session, 'novelBible', 'listVersions', [{
+    entityType: 'world-setting', entityId: world.id
+  }]), `novelBible.listVersions ${project.key}`)
+  assert.equal(versions.length, 2)
+  snapshot = assertBibleSuccess(await invokeNamed(session, 'novelBible', 'restoreVersion', [{
+    entityType: 'world-setting', entityId: world.id, versionId: initialWorldVersionId
+  }]), `novelBible.restoreVersion ${project.key}`)
+  let currentWorld = snapshot.entries.find((entry) => entry.id === world.id)
+  assert.equal(currentWorld.summary, '手工确认的初始规则')
+
+  const replacement = assertBibleSuccess(await invokeNamed(
+    session,
+    'novelBible',
+    'generateProposals',
+    [{
+      requestId: `smoke-replace-${project.key}`,
+      domain: 'setting',
+      mode: 'standard',
+      request: `SMOKE_REPLACE entity=${world.id} version=${currentWorld.currentVersionId} genre=${project.key}`,
+      targetEntityId: world.id
+    }]
+  ), `novelBible.generateProposals replacement ${project.key}`)
+  assert.equal(replacement.length, 1)
+  const blockedReplacement = await invokeNamed(session, 'novelBible', 'decideProposal', [{
+    proposalId: replacement[0].id,
+    decision: 'approve',
+    confirmReplacement: false
+  }])
+  assert.equal(blockedReplacement?.ok, false)
+  assert.equal(blockedReplacement?.error?.code, 'BIBLE_CONFLICT')
+  snapshot = assertBibleSuccess(await invokeNamed(session, 'novelBible', 'decideProposal', [{
+    proposalId: replacement[0].id,
+    decision: 'approve',
+    confirmReplacement: true
+  }]), `novelBible.decideProposal replacement ${project.key}`)
+  currentWorld = snapshot.entries.find((entry) => entry.id === world.id)
+  assert.equal(currentWorld.summary, '经用户确认的结构化规则')
+  assert.equal(currentWorld.authorityStatus, 'approved')
+
+  const rejected = assertBibleSuccess(await invokeNamed(
+    session,
+    'novelBible',
+    'generateProposals',
+    [{
+      requestId: `smoke-reject-${project.key}`,
+      domain: 'setting',
+      mode: 'standard',
+      request: `SMOKE_REJECT genre=${project.key}`,
+      targetEntityId: null
+    }]
+  ), `novelBible.generateProposals rejection ${project.key}`)
+  assert.equal(rejected.length, 1)
+  snapshot = assertBibleSuccess(await invokeNamed(session, 'novelBible', 'decideProposal', [{
+    proposalId: rejected[0].id,
+    decision: 'reject',
+    confirmReplacement: false
+  }]), `novelBible.decideProposal rejection ${project.key}`)
+  assert.equal(snapshot.entries.some((entry) => entry.title.includes('待拒绝候选')), false)
+  assert.equal(snapshot.outline.filter((node) => node.kind === 'chapter-plan').length, 3)
+  assert.deepEqual(snapshot.proposals.map((proposal) => proposal.status).sort(), [
+    'approved', 'approved', 'approved', 'approved', 'approved', 'rejected'
+  ])
+
+  versions = assertBibleSuccess(await invokeNamed(session, 'novelBible', 'listVersions', [{
+    entityType: 'world-setting', entityId: world.id
+  }]), `novelBible.listVersions after decisions ${project.key}`)
+  assert.equal(versions.length, 4)
+  assert.equal(versions.some((version) => version.sourceKind === 'restore'), true)
+  assert.equal(versions.some((version) => version.sourceKind === 'agent'), true)
+  state.bibleExpectations[project.projectId] = {
+    genre: project.key,
+    worldId: world.id,
+    entryCount: 2,
+    outlineCount: 6,
+    proposalStatuses: ['approved', 'approved', 'approved', 'approved', 'approved', 'rejected']
+  }
+  assertModelSuccess(
+    await invokeNamed(session, 'projects', 'close', []),
+    `projects.close ${project.key}`
+  )
+}
+
+const verifyBibleRestart = async (session, state) => {
+  state.stage = 'bible-restart'
+  for (const project of state.seededProjects) {
+    assertModelSuccess(
+      await invokeNamed(session, 'projects', 'openRecent', [project.projectId]),
+      `projects.openRecent restart ${project.key}`
+    )
+    const snapshot = assertBibleSuccess(
+      await invokeNamed(session, 'novelBible', 'getSnapshot', []),
+      `novelBible.getSnapshot restart ${project.key}`
+    )
+    const expected = state.bibleExpectations[project.projectId]
+    assert.equal(snapshot.profile.genre, expected.genre)
+    assert.equal(snapshot.entries.length, expected.entryCount)
+    assert.equal(snapshot.outline.length, expected.outlineCount)
+    assert.deepEqual(snapshot.proposals.map((proposal) => proposal.status).sort(), expected.proposalStatuses)
+    const world = snapshot.entries.find((entry) => entry.id === expected.worldId)
+    assert.equal(world.summary, '经用户确认的结构化规则')
+    assert.equal(snapshot.entries.some((entry) => entry.title.includes('待拒绝候选')), false)
+    assertModelSuccess(
+      await invokeNamed(session, 'projects', 'close', []),
+      `projects.close restart ${project.key}`
+    )
+  }
 }
 
 const getRun = async (session, state, id) => {
@@ -529,6 +897,23 @@ const runBuild = async (cwd, state) => {
   }
 }
 
+const seedSmokeProjects = async (cwd, userDataDir, state) => {
+  const record = await runCommand(process.execPath, [
+    '--experimental-strip-types',
+    '--no-warnings',
+    join(cwd, 'scripts', 'electron-smoke-seed.mjs'),
+    userDataDir
+  ], { cwd, timeoutMs: START_TIMEOUT_MS })
+  state.processRecords.push(record)
+  const projects = JSON.parse(record.logs.stdout)
+  assert.equal(Array.isArray(projects), true)
+  assert.deepEqual(projects.map((project) => project.key).sort(), [
+    'sci-fi-future', 'urban-campus'
+  ])
+  assert.equal(projects.every((project) => typeof project.projectId === 'string'), true)
+  return projects
+}
+
 const diagnosticDirectory = () => process.env.ELECTRON_SMOKE_ARTIFACT_DIR ?? join(tmpdir(), 'open-novel-electron-smoke-diagnostics')
 
 export const runSmoke = async ({ cwd = resolve(fileURLToPath(new URL('..', import.meta.url))) } = {}) => {
@@ -538,6 +923,7 @@ export const runSmoke = async ({ cwd = resolve(fileURLToPath(new URL('..', impor
     processRecords: [],
     runSummaries: {},
     rawRuns: {},
+    bibleExpectations: {},
     console: [],
     cleanup: []
   }
@@ -554,12 +940,18 @@ export const runSmoke = async ({ cwd = resolve(fileURLToPath(new URL('..', impor
     modelProvider = await startFakeModelProvider()
     state.modelBaseUrl = modelProvider.baseUrl
     userDataDir = await createSmokeUserDataDirectory()
+    state.stage = 'project-seed'
+    state.seededProjects = await seedSmokeProjects(cwd, userDataDir, state)
     state.stage = 'startup'
     currentSession = await startSession(cwd, userDataDir, state)
+    for (const project of state.seededProjects) {
+      await runBibleGenreScenario(currentSession, state, project)
+    }
     assertAgentSuccess(await invoke(currentSession, 'listRuns'), 'listRuns')
     await runApprovalScenario(currentSession, state)
     await runCancellationScenario(currentSession, state)
     currentSession = await runRecoveryScenario(currentSession, state, cwd, userDataDir)
+    await verifyBibleRestart(currentSession, state)
     await drainEvents(currentSession)
   } catch (error) {
     failure = error

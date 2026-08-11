@@ -127,6 +127,7 @@ export class ProjectService {
   #shutdown = false
   #operationTail: Promise<void> = Promise.resolve()
   #shutdownPromise?: Promise<void>
+  readonly #projectListeners = new Set<(summary: ProjectSummary | undefined) => void>()
 
   private constructor(
     control: ControlProjectRepository,
@@ -149,6 +150,11 @@ export class ProjectService {
 
   current(): ProjectSummary | undefined {
     return this.#active === undefined ? undefined : { ...this.#active.summary }
+  }
+
+  subscribe(listener: (summary: ProjectSummary | undefined) => void): () => void {
+    this.#projectListeners.add(listener)
+    return () => this.#projectListeners.delete(listener)
   }
 
   create(input: { root: string; title: string }): Promise<ProjectSummary> {
@@ -189,6 +195,7 @@ export class ProjectService {
       const summary = await repository.load(manifest.projectId, paths.root)
       await this.#control.recordOpened(summary, this.#dependencies.now())
       this.#active = { summary, manifest, paths, lock, repository }
+      this.#emitProjectChanged()
       return { ...summary }
     } catch (error) {
       await repository?.close().catch(() => undefined)
@@ -237,6 +244,7 @@ export class ProjectService {
       }
       await this.#control.recordOpened(summary, this.#dependencies.now(), lastBackupPath)
       this.#active = { summary, manifest, paths, lock, repository }
+      this.#emitProjectChanged()
       return { ...summary }
     } catch (error) {
       await inspector?.close().catch(() => undefined)
@@ -439,6 +447,7 @@ export class ProjectService {
     const active = this.#active
     if (active === undefined) return
     this.#active = undefined
+    this.#emitProjectChanged()
     try {
       await active.repository.close()
     } finally {
@@ -480,6 +489,17 @@ export class ProjectService {
       throw new ProjectDomainError('PROJECT_NOT_OPEN', 'No project is open')
     }
     return this.#active
+  }
+
+  #emitProjectChanged(): void {
+    const summary = this.current()
+    for (const listener of this.#projectListeners) {
+      try {
+        listener(summary)
+      } catch {
+        // Project lifecycle must not be interrupted by an observer.
+      }
+    }
   }
 
   async #createMigrationBackup(

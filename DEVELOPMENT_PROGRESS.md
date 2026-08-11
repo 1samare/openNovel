@@ -27,7 +27,7 @@
 | 阶段 1 | 独立项目、本地数据库与项目生命周期 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | 阶段提交已推送至 `origin/feat/v1.0@1a73a03`；复审无 Critical/Important；最终全门禁通过 | 创建阶段 2 当天计划并重新核对远端 |
 | 阶段 2 | 章节树、纯文本编辑器、版本与文件交换 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` | 阶段成果已普通快进推送至 `origin/feat/v1.0@b835840`；复审无 Critical/Important；最终全门禁通过 | 创建阶段 3 当天计划并重新核对远端 |
 | 阶段 3 | BYOK 密钥库、Model Gateway 与角色绑定 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0@ebc2824` | 用户已确认；阶段成果普通快进推送至 `origin/feat/v1.0@ebc2824`；全门禁、终审和 DeepSeek 验收通过 | 创建阶段 4 当天计划并重新核对远端 |
-| 阶段 4 | 小说圣经与结构化共创 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 阶段 3 已完成并推送 | 完整读取本清单，创建阶段 4 当天计划并 fetch 核对远端 |
+| 阶段 4 | 小说圣经与结构化共创 | 待验证 | `D:\Code\codex\openNovel` / `feat/v1.0` 当前 HEAD（阶段 4 本地交接） | Task 1–10 已交付；终审无 Critical/Important；完整本地门禁通过 | 等待用户明确确认；确认后普通快进推送并回填远端结果 |
 | 阶段 5 | 受控多 Agent 正文与选区 AI | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 4 | 阶段 4 通过并推送后创建阶段 5 计划 |
 | 阶段 6 | 长篇上下文、记忆、质量门禁与评测 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 5 | 阶段 5 通过并推送后创建阶段 6 计划 |
 | 阶段 7 | 外部 Skill 隔离导入、审核与应用 | 待开始 | `D:\Code\codex\openNovel` / `feat/v1.0` | 依赖阶段 6 | 阶段 6 通过并推送后创建阶段 7 计划 |
@@ -37,7 +37,7 @@
 
 | 工作区绝对路径 | 分支 | HEAD | 状态 | 已核实事实 | 接手动作 |
 |---|---|---|---|---|---|
-| `D:\Code\codex\openNovel` | `feat/v1.0` | 当前 HEAD（阶段 3 最终完成记录） | 已完成 | 用户已确认；阶段交付边界 `ebc2824` 与最终完成记录均已普通快进推送，upstream 0/0；独立治理差异与用户 `.superpowers/` 排除 | 创建阶段 4 当天计划，重新读取本清单并 fetch 核对远端 |
+| `D:\Code\codex\openNovel` | `feat/v1.0` | 当前 HEAD（阶段 4 本地交接） | 待验证 | Task 1–10、两轮复审与完整本地门禁通过；开工时 upstream 0/0；独立治理差异与用户 `.superpowers/` 继续排除 | 等待用户确认后普通快进推送 `origin/feat/v1.0` |
 | `D:\Code\codex\openNovel\.worktrees\harness-agent-loop` | `feat/harness-agent-loop` | `31ca681` | 需核实 | 已核对到仅有未跟踪 `.superpowers/`；未检测到相对 `main` 的已提交差异 | 使用该 worktree 前先确认任务所有者和是否仍需保留 |
 | `D:\Code\codex\openNovel\.worktrees\phase-0-test-foundation` | `codex/phase-0-test-foundation` | `0736181` | 已完成 | 阶段 0 代码与交接已进入 `feat/v1.0`；该历史 worktree 不再作为阶段入口 | 保留记录，未经用户授权不删除、修改或复用 |
 
@@ -51,6 +51,7 @@
 | 阶段 1 独立项目与本地数据库 | 阶段 1 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0@1a73a03`（阶段完成） | `docs/2026-08-07/阶段1独立项目与本地数据库计划.md` | 用户已确认；阶段提交已推送；Node 123/123、UI 8/8、类型、README、build、smoke、acceptance、空白检查均通过；upstream 0/0 | 创建阶段 2 当天计划，读取本清单并重新 fetch 核对远端 | 2026-08-10 |
 | 阶段 2 章节编辑版本与文件交换 | 阶段 2 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0@b835840`（阶段交接） | `docs/2026-08-10/阶段2章节编辑版本与文件交换计划.md` | 用户已确认；推送前 Node 153/153、UI 23/23、README、类型、build、smoke、acceptance、audit 0；`b4ec16f..b835840` 普通快进推送成功且 upstream 0/0 | 创建阶段 3 当天计划，读取本清单并重新 fetch 核对远端 | 2026-08-10 |
 | 阶段 3 BYOK 密钥库、Model Gateway 与角色绑定 | 阶段 3 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0` 当前 HEAD（最终完成记录） | `docs/2026-08-10/阶段3BYOK密钥库ModelGateway与角色绑定计划.md` | 用户已确认；推送前 Node 204/204、UI 31/31、README、类型、build、smoke、acceptance、audit 0；阶段交付与最终完成记录均普通快进推送且 upstream 0/0 | 创建阶段 4 当天计划，读取本清单并重新 fetch 核对远端 | 2026-08-10 |
+| 阶段 4 小说圣经与结构化共创 | 阶段 4 | 待验证 | `D:\Code\codex\openNovel` / `feat/v1.0` 当前 HEAD（阶段 4 本地交接） | `docs/2026-08-11/阶段4小说圣经与结构化共创计划.md` | Node 226/226、UI 41/41、README、类型、build、smoke、acceptance、audit 0、终审无 Critical/Important | 等待用户明确确认；确认后普通快进推送并核对 upstream/ahead/behind | 2026-08-11 |
 | PR Quality 测试环境隔离修复 | 阶段 2 内 CI 修复 | 已完成 | `D:\Code\codex\openNovel` / `feat/v1.0@b4ec16f` | `docs/2026-08-10/PR质量检查测试环境隔离修复计划.md` | 本地完整门禁通过；push/pull_request Quality 均通过；upstream 0/0 | 恢复阶段 2 前核对其未提交差异与活动任务实际状态 | 2026-08-10 |
 
 ## 遗留变更与风险
@@ -62,6 +63,28 @@
 - 根工作区另有未提交的 GitHub Actions 默认禁用治理差异：`AGENTS.md`、根 `README.md`、`docs/2026-08-10/README.md` 和对应计划；阶段 3 提交与推送均排除了非本阶段 hunk。
 
 ## 最近交接
+
+### 2026-08-11：阶段 4 本地完成，等待确认
+
+- 工作区：`D:\Code\codex\openNovel`
+- 分支与提交：`feat/v1.0` / 开工基线 `b88f8a3`，阶段 4 本地交接由当前 HEAD 承载
+- 当前状态：待验证
+- 已完成：Task 1–10 交付 project schema v4、作品档案、九类资料、四级大纲、追加式来源版本、三角色严格结构化提案、可信冲突/审批、固定十命令 IPC/preload、活动项目 Runtime、世界观/人物/大纲页面与双题材生产闭环。两轮只读复审发现的问题均按 RED/GREEN 修复；末轮重点把移动大纲历史恢复收束为单个 CAS 事务，并隔离同项目无关快照对未保存档案草稿的覆盖。终审确认无剩余 Critical/Important。
+- 最近验证：Node `v22.18.0` 下 `npm.cmd test` 为 Node 226/226、UI 7 文件 41/41；`npm.cmd run check:readmes`、`npm.cmd run typecheck`、受控外层权限下 production build、`npm.cmd run test:electron-smoke`、`npm.cmd run test:acceptance`、npm 官方 audit 与 Git 空白检查全部退出 0；两次生产验收均输出 `Electron production smoke passed`，audit 为 `found 0 vulnerabilities`。
+- 未提交变更：阶段 4 差异由本交接提交承载；`AGENTS.md`、根 README 的 Actions hunk、`docs/2026-08-10/README.md`、对应 Actions 计划和用户 `.superpowers/` 继续保留原归属，不进入阶段 4 暂存、提交或后续推送。
+- 下一步：等待用户明确确认阶段 4 完成；确认即授权把阶段 4 本地交接普通快进推送到 `origin/feat/v1.0`，随后核对 upstream 与 ahead/behind 并回填远端完成记录。
+- 阻塞项：无。
+
+### 2026-08-11：阶段 4 开工
+
+- 工作区：`D:\Code\codex\openNovel`
+- 分支与基线：`feat/v1.0` / `b88f8a3`
+- 当前状态：进行中
+- 已完成：完整读取开发进度清单、全阶段计划与阶段 4 相关架构设计；核对根工作区、历史 worktree、当前分支/HEAD、已有修改归属；创建当天阶段 4 计划；远端核对 0/0；Task 1–8 已交付契约、仓储、提案、结构化模型路由、主进程边界、共享 renderer 状态/组件、世界观、人物和四级大纲；Task 9 已用生产 bridge 完成双题材空项目到世界/人物/前三章、版本恢复、结构化替代/拒绝和重启闭环，并修复 sandbox preload 外部化 Zod 的生产缺陷。
+- 最近验证：`tests/electron-foundation.test.mjs` 9/9、`tests/electron-smoke.test.mjs` 8/8、production smoke 与 acceptance 均退出 0并输出 `Electron production smoke passed`；此前完整 UI 7 文件/36 项、Bible IPC 3/3、阶段 4/Electron/Model 聚焦回归 31 项与完整类型检查均通过。
+- 未提交变更：阶段 4 计划、`docs/2026-08-11/README.md`、文档索引、根 README 的阶段 4 hunk和本进度登记归属本任务；`AGENTS.md`、根 README 的 Actions hunk、`docs/2026-08-10/README.md`、对应 Actions 计划及 `.superpowers/` 保持原归属并排除。
+- 下一步：执行 Task 10，逐条审计阶段 4 退出标准并运行 README、严格类型、全量 Node/UI、build、双生产验收、npm audit 与 Git 空白检查。
+- 阻塞项：无。
 
 ### 2026-08-10：阶段 3 完成并推送
 

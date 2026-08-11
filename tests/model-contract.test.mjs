@@ -76,7 +76,7 @@ test('phase three migrations create model metadata and project binding tables', 
     await rm(sandbox, { recursive: true, force: true, maxRetries: 3, retryDelay: 25 })
   })
 
-  assert.equal((await project.health()).userVersion, 3)
+  assert.equal((await project.health()).userVersion, 4)
   assert.equal((await control.health()).userVersion, 2)
   assert.deepEqual(await project.all(`
     SELECT name FROM sqlite_master
