@@ -129,6 +129,8 @@ OpenNovel 是一个面向 Windows 的本地优先小说 AI 辅助写作桌面应
 
 - 2026-08-11：阶段 4 Task 1–10 本地交接完成；两轮复审问题均已修复，终审无剩余 Critical/Important，完整本地门禁通过，等待用户确认后普通快进推送。
 
+- 2026-08-11：用户确认阶段 4 完成；实现提交 `b63d4e6` 与最终完成记录均普通快进推送到 `origin/feat/v1.0`，推送后 upstream 与 ahead/behind 核对为 0/0。
+
 ## 技术栈
 
 - Electron
